@@ -11,4 +11,8 @@
     <Folder Include="Concrete\DatabaseFolder\DataSeeder\Fakers\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CorporateMenuManagementSystem.EntityLayer\CorporateMenuManagementSystem.EntityLayer.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -11,4 +11,9 @@
     <Folder Include="Concrete\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CorporateMenuManagementSystem.DataAccessLayer\CorporateMenuManagementSystem.DataAccessLayer.csproj" />
+    <ProjectReference Include="..\CorporateMenuManagementSystem.EntityLayer\CorporateMenuManagementSystem.EntityLayer.csproj" />
+  </ItemGroup>
+
 </Project>
