@@ -5,6 +5,7 @@ using Serilog;
 using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using backend.Data;
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -95,9 +96,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-// Placeholder for ApplicationDbContext - will be implemented in Data layer
-public class ApplicationDbContext : DbContext
-{
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
-}
