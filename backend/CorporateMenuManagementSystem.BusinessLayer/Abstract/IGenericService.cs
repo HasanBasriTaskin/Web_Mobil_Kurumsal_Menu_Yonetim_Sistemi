@@ -7,11 +7,11 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
     public interface IGenericService<T> where T : class
     {
-        Task TAddAsync(T entity);
-        Task TUpdateAsync(T entity);
-        Task TDeleteAsync(T entity);
-        Task<T> TGetByIdAsync(int id);
-        Task<List<T>> TGetAllAsync();
-        Task<List<T>> TGetListByFilterAsync(Expression<Func<T, bool>> filter);
+        Task AddAsync(T entity);
+        Task UpdateAsync(T entity);
+        Task DeleteAsync(T entity);
+        Task<T> GetByIdAsync(int id);
+        Task<List<T>> GetAllAsync();
+        Task<List<T>> GetListByFilterAsync(Expression<Func<T, bool>> filter);
     }
 }

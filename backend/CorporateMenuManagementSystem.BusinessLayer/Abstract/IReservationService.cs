@@ -7,8 +7,8 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
     public interface IReservationService : IGenericService<Reservation>
     {
-        Task<List<Reservation>> TGetReservationsByUserIdWithRelationsAsync(string userId);
-        Task<List<Reservation>> TGetReservationsByDateWithRelationsAsync(DateTime date);
-        Task<int> TGetTotalReservationsCountByDateAsync(DateTime date);
+        Task<List<Reservation>> GetReservationsByUserIdWithRelationsAsync(string userId);
+        Task<List<Reservation>> GetReservationsByDateWithRelationsAsync(DateTime date);
+        Task<int> GetTotalReservationsCountByDateAsync(DateTime date);
     }
 }

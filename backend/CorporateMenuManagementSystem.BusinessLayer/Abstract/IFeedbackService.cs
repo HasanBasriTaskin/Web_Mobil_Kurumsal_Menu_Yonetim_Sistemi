@@ -6,6 +6,6 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
     public interface IFeedbackService : IGenericService<Feedback>
     {
-        Task<List<Feedback>> TGetAllFeedbacksWithRelationsAsync();
+        Task<List<Feedback>> GetAllFeedbacksWithRelationsAsync();
     }
 }

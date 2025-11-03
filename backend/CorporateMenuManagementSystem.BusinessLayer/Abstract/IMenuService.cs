@@ -7,7 +7,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
     public interface IMenuService : IGenericService<Menu>
     {
-        Task<Menu> TGetMenuByDateWithRelationsAsync(DateTime date);
-        Task<List<Menu>> TGetTopRatedMenusAsync(int count);
+        Task<Menu> GetMenuByDateWithRelationsAsync(DateTime date);
+        Task<List<Menu>> GetTopRatedMenusAsync(int count);
     }
 }

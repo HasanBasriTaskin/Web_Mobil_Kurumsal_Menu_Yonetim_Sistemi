@@ -6,8 +6,8 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
     public interface INotificationService : IGenericService<Notification>
     {
-        Task<List<Notification>> TGetUserNotificationsAsync(string userId);
-        Task<int> TGetUserUnreadNotificationCountAsync(string userId);
-        Task TMarkAllAsReadAsync(string userId);
+        Task<List<Notification>> GetUserNotificationsAsync(string userId);
+        Task<int> GetUserUnreadNotificationCountAsync(string userId);
+        Task MarkAllAsReadAsync(string userId);
     }
 }
