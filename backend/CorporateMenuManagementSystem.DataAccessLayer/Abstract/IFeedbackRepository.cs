@@ -1,0 +1,9 @@
+using CorporateMenuManagementSystem.EntityLayer.Entitites;
+
+namespace CorporateMenuManagementSystem.DataAccessLayer.Abstract
+{
+    public interface IFeedbackRepository : IGenericRepository<Feedback>
+    {
+        // Geri bildirime özel metodlar ileride buraya eklenebilir.
+    }
+}
