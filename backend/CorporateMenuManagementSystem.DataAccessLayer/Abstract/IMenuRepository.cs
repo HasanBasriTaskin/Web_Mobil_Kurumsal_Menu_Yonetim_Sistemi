@@ -1,9 +1,13 @@
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Abstract
 {
     public interface IMenuRepository : IGenericRepository<Menu>
     {
-        // Menüye özel metodlar ileride buraya eklenebilir.
+        Task<Menu> GetMenuByDateWithRelationsAsync(DateTime date);
+        Task<List<Menu>> GetTopRatedMenusAsync(int count);
     }
 }
