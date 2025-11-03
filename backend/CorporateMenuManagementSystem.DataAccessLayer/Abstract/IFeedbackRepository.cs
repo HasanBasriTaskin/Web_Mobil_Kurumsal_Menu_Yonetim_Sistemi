@@ -1,9 +1,11 @@
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Abstract
 {
     public interface IFeedbackRepository : IGenericRepository<Feedback>
     {
-        // Geri bildirime özel metodlar ileride buraya eklenebilir.
+        Task<List<Feedback>> GetAllFeedbacksWithRelationsAsync();
     }
 }
