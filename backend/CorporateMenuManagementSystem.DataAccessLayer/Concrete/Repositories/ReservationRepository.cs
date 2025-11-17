@@ -17,6 +17,14 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
             _context = context;
         }
 
+        public async Task<Reservation> GetByIdWithRelationsAsync(int id)
+        {
+            return await _context.Reservations
+                .Include(r => r.AppUser)
+                .Include(r => r.Menu)
+                .FirstOrDefaultAsync(r => r.Id == id);
+        }
+
         public async Task<List<Reservation>> GetReservationsByDateWithRelationsAsync(DateTime date)
         {
             return await _context.Reservations

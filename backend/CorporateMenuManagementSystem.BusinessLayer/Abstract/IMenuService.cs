@@ -13,5 +13,6 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
         Task<Response<MenuDto>> CreateMenuAsync(CreateMenuDto createMenuDto);
         Task<Response<MenuDto>> UpdateMenuAsync(int menuId, UpdateMenuDto updateMenuDto);
         Task<Response<NoContentDto>> DeleteMenuAsync(int menuId, bool force = false);
+        Task<Response<List<MenuDto>>> GetWeeklyMenusAsync(string week);
     }
 }

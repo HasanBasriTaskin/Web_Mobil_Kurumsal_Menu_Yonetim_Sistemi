@@ -1,17 +1,17 @@
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
-    public interface IReservationService : IGenericService<Reservation>
+    public interface IReservationService
     {
-        Task<List<Reservation>> GetReservationsByUserIdWithRelationsAsync(string userId);
-        Task<List<Reservation>> GetReservationsByDateWithRelationsAsync(DateTime date);
-        Task<int> GetTotalReservationsCountByDateAsync(DateTime date);
-        Task<Response<Reservation>> CreateReservationAsync(Reservation reservation);
+        Task<Response<List<ReservationDto>>> GetReservationsByUserIdWithRelationsAsync(string userId);
+        Task<Response<List<ReservationDto>>> GetReservationsByDateWithRelationsAsync(DateTime date);
+        Task<Response<int>> GetTotalReservationsCountByDateAsync(DateTime date);
+        Task<Response<ReservationDto>> CreateReservationAsync(CreateReservationDto createReservationDto, string userId);
         Task<Response<NoContentDto>> CancelReservationAsync(int reservationId, string userId);
     }
 }

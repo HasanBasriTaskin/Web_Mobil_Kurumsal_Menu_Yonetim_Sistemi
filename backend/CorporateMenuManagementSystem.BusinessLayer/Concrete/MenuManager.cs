@@ -97,5 +97,45 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             var updatedMenuDto = _mapper.Map<MenuDto>(existingMenu);
             return Response<MenuDto>.Success(updatedMenuDto, 200);
         }
+
+        public async Task<Response<List<MenuDto>>> GetWeeklyMenusAsync(string week)
+        {
+            var today = DateTime.Today;
+            
+            // Haftanın başlangıcı olan Pazartesi gününü bulmak için bugünden geriye doğru say.
+            var currentWeekStartDate = today;
+            while (currentWeekStartDate.DayOfWeek != DayOfWeek.Monday)
+            {
+                // Eğer gün Pazartesi değilse, bir önceki güne geç.
+                currentWeekStartDate = currentWeekStartDate.AddDays(-1);
+            }
+
+            DateTime startDate;
+
+            // Gelen 'week' parametresine göre istenen haftanın başlangıç tarihini hesapla.
+            if (week.ToLower() == "next")
+            {
+                // Eğer gelecek hafta isteniyorsa, haftanın başlangıcına 7 gün ekle.
+                startDate = currentWeekStartDate.AddDays(7);
+            }
+            else
+            {
+                startDate = currentWeekStartDate;
+            }
+            
+            // Haftanın bitiş tarihini (Pazar) hesapla.
+            var endDate = startDate.AddDays(6);
+
+            var menus = await _menuRepository.GetMenusByDateRangeAsync(startDate, endDate);
+
+            if(menus == null || !menus.Any())
+            {
+                return Response<List<MenuDto>>.Fail(new ErrorDetail("Not Found", "Bu hafta için bir menü planı bulunamadı."), 404);
+            }
+
+            var menuDtos = _mapper.Map<List<MenuDto>>(menus);
+
+            return Response<List<MenuDto>>.Success(menuDtos, 200);
+        }
     }
 }

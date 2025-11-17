@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Linq.Expressions;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
 {
@@ -23,6 +24,14 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
                 .Include(m => m.Feedbacks)
                 .Include(m => m.Reservations)
                 .FirstOrDefaultAsync(m => m.MenuDate.Date == date.Date);
+        }
+
+        public async Task<List<Menu>> GetMenusByDateRangeAsync(DateTime startDate, DateTime endDate)
+        {
+            return await _context.Menus
+                .Where(m => m.MenuDate.Date >= startDate.Date && m.MenuDate.Date <= endDate.Date)
+                .OrderBy(m => m.MenuDate)
+                .ToListAsync();
         }
 
         public async Task<List<Menu>> GetTopRatedMenusAsync(int count)
