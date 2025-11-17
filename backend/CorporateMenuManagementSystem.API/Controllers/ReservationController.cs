@@ -1,14 +1,15 @@
 using CorporateMenuManagementSystem.BusinessLayer.Abstract;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.API.Controllers
 {
     [Route("api/reservations")]
     [ApiController]
-    [Authorize]
     public class ReservationController : ControllerBase
     {
         private readonly IReservationService _reservationService;
@@ -18,57 +19,70 @@ namespace CorporateMenuManagementSystem.API.Controllers
             _reservationService = reservationService;
         }
 
-        // POST: api/reservations
-        [HttpPost]
-        public async Task<IActionResult> CreateReservation()
-        {
-            // Implementation
-            return Ok();
-        }
-
-        // DELETE: api/reservations/{id}
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> CancelReservation(int id)
-        {
-            // Implementation
-            return Ok();
-        }
-
         // GET: api/reservations/me
         [HttpGet("me")]
+        [Authorize]
         public async Task<IActionResult> GetMyReservations()
         {
-            // Implementation
-            return Ok();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _reservationService.GetReservationsByUserIdWithRelationsAsync(userId);
+            return Ok(result);
         }
-    }
 
-    [Route("api/admin/reservations")]
-    [ApiController]
-    [Authorize(Roles = "Admin")]
-    public class AdminReservationController : ControllerBase
-    {
-        private readonly IReservationService _reservationService;
-
-        public AdminReservationController(IReservationService reservationService)
+        // POST: api/reservations
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> CreateReservation([FromBody] CreateReservationDto createReservationDto)
         {
-            _reservationService = reservationService;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _reservationService.CreateReservationAsync(createReservationDto, userId);
+
+            if (result.IsSuccessful)
+            {
+                return StatusCode(201, result);
+            }
+            return StatusCode(result.StatusCode, result);
         }
 
-        // GET: api/admin/reservations/summary
-        [HttpGet("summary")]
+        // DELETE: api/reservations/5
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> CancelReservation(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _reservationService.CancelReservationAsync(id, userId);
+
+            if (result.IsSuccessful)
+            {
+                return NoContent();
+            }
+            return StatusCode(result.StatusCode, result);
+        }
+
+        // --- Admin Endpoints ---
+
+        // GET: api/reservations/summary
+        [HttpGet("/api/admin/reservations/summary")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetReservationSummary()
         {
-            // Implementation
-            return Ok();
+            var todayCount = await _reservationService.GetTotalReservationsCountByDateAsync(DateTime.Now);
+            var tomorrowCount = await _reservationService.GetTotalReservationsCountByDateAsync(DateTime.Now.AddDays(1));
+
+            return Ok(new 
+            {
+                TodayReservationCount = todayCount.Data,
+                TomorrowReservationCount = tomorrowCount.Data
+            });
         }
 
-        // GET: api/admin/reservations/daily
-        [HttpGet("daily")]
+        // GET: api/reservations/daily
+        [HttpGet("/api/admin/reservations/daily")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetDailyReservations([FromQuery] DateTime date)
         {
-            // Implementation
-            return Ok();
+            var result = await _reservationService.GetReservationsByDateWithRelationsAsync(date);
+            return Ok(result);
         }
     }
 }

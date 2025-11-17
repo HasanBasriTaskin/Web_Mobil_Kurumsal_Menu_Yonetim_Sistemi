@@ -65,6 +65,17 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             return Response<NoContentDto>.Success(new NoContentDto(), 204);
         }
 
+        public async Task<Response<MenuDto>> GetMenuByIdAsync(int id)
+        {
+            var menu = await _menuRepository.GetByIdAsync(id);
+            if (menu == null)
+            {
+                return Response<MenuDto>.Fail(new ErrorDetail("Not Found", "Menü bulunamadı."), 404);
+            }
+            var menuDto = _mapper.Map<MenuDto>(menu);
+            return Response<MenuDto>.Success(menuDto, 200);
+        }
+
         public async Task<Response<MenuDto>> GetMenuByDateWithRelationsAsync(DateTime date)
         {
             var menu = await _menuRepository.GetMenuByDateWithRelationsAsync(date);

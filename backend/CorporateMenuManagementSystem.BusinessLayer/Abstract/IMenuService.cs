@@ -8,6 +8,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
     public interface IMenuService
     {
+        Task<Response<MenuDto>> GetMenuByIdAsync(int id);
         Task<Response<MenuDto>> GetMenuByDateWithRelationsAsync(DateTime date);
         Task<Response<List<MenuDto>>> GetTopRatedMenusAsync(int count);
         Task<Response<MenuDto>> CreateMenuAsync(CreateMenuDto createMenuDto);

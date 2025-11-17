@@ -32,7 +32,16 @@ namespace CorporateMenuManagementSystem.API.Controllers
             var result = await _menuService.GetWeeklyMenusAsync(week);
             return StatusCode(result.StatusCode, result);
         }
-        
+
+        // GET: api/menu/{id}
+        [HttpGet("admin/menu/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetMenuById(int id)
+        {
+            var result = await _menuService.GetMenuByIdAsync(id);
+            return StatusCode(result.StatusCode, result);
+        }
+
         // GET: api/menu/top-rated
         [HttpGet("top-rated")]
         public async Task<IActionResult> GetTopRatedMenus([FromQuery] int count = 5)
@@ -49,7 +58,7 @@ namespace CorporateMenuManagementSystem.API.Controllers
             var result = await _menuService.CreateMenuAsync(createMenuDto);
             if (result.IsSuccessful)
             {
-                return CreatedAtAction(nameof(GetTodayMenu), new { id = result.Data.Id }, result);
+                return CreatedAtAction(nameof(GetMenuById), new { id = result.Data.Id }, result);
             }
             return StatusCode(result.StatusCode, result);
         }
