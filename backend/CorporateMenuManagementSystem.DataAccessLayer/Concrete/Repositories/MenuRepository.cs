@@ -27,7 +27,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
 
         public async Task<List<Menu>> GetTopRatedMenusAsync(int count)
         {
-            var topMenuIds = await _context.Feedbacks
+            var topMenusInfo = await _context.Feedbacks
                 .GroupBy(f => f.MenuId)
                 .Select(g => new
                 {
@@ -36,13 +36,25 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
                 })
                 .OrderByDescending(x => x.AverageRating)
                 .Take(count)
-                .Select(x => x.MenuId)
                 .ToListAsync();
 
-            return await _context.Menus
+            var topMenuIds = topMenusInfo.Select(x => x.MenuId).ToList();
+
+            var menus = await _context.Menus
                 .Where(m => topMenuIds.Contains(m.Id))
-                .Include(m => m.Feedbacks) 
+                .Include(m => m.Feedbacks)
                 .ToListAsync();
+
+            // Menüleri, hesaplanan puan sırasına göre yeniden sırala. Veritabanından gelirken veriler karışık gelebiliyor o yüzden böyle
+            // memory'deyken tekrar sıralatıyorum.
+            var sortedMenus = topMenusInfo
+                .Join(menus,
+                      info => info.MenuId,
+                      menu => menu.Id,
+                      (info, menu) => menu)
+                .ToList();
+
+            return sortedMenus;
         }
     }
 }
