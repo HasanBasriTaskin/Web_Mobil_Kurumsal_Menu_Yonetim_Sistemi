@@ -12,6 +12,6 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
         Task<List<Menu>> GetTopRatedMenusAsync(int count);
         Task<Response<Menu>> CreateMenuAsync(Menu menu);
         Task<Response<Menu>> UpdateMenuAsync(Menu menu);
-        Task<Response<object>> DeleteMenuAsync(int menuId, bool force = false);
+        Task<Response<NoContentDto>> DeleteMenuAsync(int menuId, bool force = false);
     }
 }

@@ -39,13 +39,13 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             return Response<Menu>.Success(menu, 201);
         }
 
-        public async Task<Response<object>> DeleteMenuAsync(int menuId, bool force = false)
+        public async Task<Response<NoContentDto>> DeleteMenuAsync(int menuId, bool force = false)
         {
             var menuToDelete = await _menuRepository.GetByIdAsync(menuId);
             // Silinecek menü var mı?
             if (menuToDelete == null)
             {
-                return Response<object>.Fail(new ErrorDetail("MenuNotFound", "Silinecek menü bulunamadı."), 404);
+                return Response<NoContentDto>.Fail(new ErrorDetail("MenuNotFound", "Silinecek menü bulunamadı."), 404);
             }
             // Menüye ait rezervasyon varsa silinemez.
             if (!force)
@@ -53,12 +53,12 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
                 var reservations = await _reservationRepository.GetListByFilterAsync(r => r.MenuId == menuId);
                 if (reservations.Any())
                 {
-                    return Response<object>.Fail(new ErrorDetail("HasReservations", "Bu menüye yapılmış rezervasyonlar var. Silmek için 'force=true' parametresini kullanın."), 400);
+                    return Response<NoContentDto>.Fail(new ErrorDetail("HasReservations", "Bu menüye yapılmış rezervasyonlar var. Silmek için 'force=true' parametresini kullanın."), 400);
                 }
             }
 
             await _menuRepository.DeleteAsync(menuToDelete);
-            return Response<object>.Success(null, 204);
+            return Response<NoContentDto>.Success(new NoContentDto(), 204);
         }
 
         public async Task<Response<Menu>> UpdateMenuAsync(Menu menu)

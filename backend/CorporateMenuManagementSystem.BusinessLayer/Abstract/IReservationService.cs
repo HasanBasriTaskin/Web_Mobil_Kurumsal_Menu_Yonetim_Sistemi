@@ -12,6 +12,6 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
         Task<List<Reservation>> GetReservationsByDateWithRelationsAsync(DateTime date);
         Task<int> GetTotalReservationsCountByDateAsync(DateTime date);
         Task<Response<Reservation>> CreateReservationAsync(Reservation reservation);
-        Task<Response<object>> CancelReservationAsync(int reservationId, string userId);
+        Task<Response<NoContentDto>> CancelReservationAsync(int reservationId, string userId);
     }
 }

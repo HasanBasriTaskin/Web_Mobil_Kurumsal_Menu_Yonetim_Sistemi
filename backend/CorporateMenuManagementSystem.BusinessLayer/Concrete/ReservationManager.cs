@@ -46,29 +46,29 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             return Response<Reservation>.Success(reservation, 201);
         }
 
-        public async Task<Response<object>> CancelReservationAsync(int reservationId, string userId)
+        public async Task<Response<NoContentDto>> CancelReservationAsync(int reservationId, string userId)
         {
             var reservation = await _reservationRepository.GetByIdAsync(reservationId);
 
             // Rezervasyon var mı ve bu kullanıcıya mı ait?
             if (reservation == null || reservation.AppUserId != userId)
             {
-                return Response<object>.Fail(new ErrorDetail("NotFoundOrForbidden", "İptal edilecek rezervasyon bulunamadı veya bu işlem için yetkiniz yok."), 404);
+                return Response<NoContentDto>.Fail(new ErrorDetail("NotFoundOrForbidden", "İptal edilecek rezervasyon bulunamadı veya bu işlem için yetkiniz yok."), 404);
             }
 
             // İptal etme süresi geçti mi? (Örn: Sadece gelecek günler veya aynı gün saat 10:00'dan önce)
             if (reservation.Menu.MenuDate.Date == DateTime.Now.Date && DateTime.Now.Hour >= 10)
             {
-                return Response<object>.Fail(new ErrorDetail("CancellationTimeExpired", "Bugünkü rezervasyon için son iptal saati (10:00) geçmiştir."), 400);
+                return Response<NoContentDto>.Fail(new ErrorDetail("CancellationTimeExpired", "Bugünkü rezervasyon için son iptal saati (10:00) geçmiştir."), 400);
             }
              if (reservation.Menu.MenuDate.Date < DateTime.Now.Date)
             {
-                return Response<object>.Fail(new ErrorDetail("CannotCancelPast", "Geçmiş tarihli bir rezervasyon iptal edilemez."), 400);
+                return Response<NoContentDto>.Fail(new ErrorDetail("CannotCancelPast", "Geçmiş tarihli bir rezervasyon iptal edilemez."), 400);
             }
 
 
             await _reservationRepository.DeleteAsync(reservation);
-            return Response<object>.Success(null, 204); // 204 No Content
+            return Response<NoContentDto>.Success(new NoContentDto(), 204); // 204 No Content
         }
 
         public async Task<List<Reservation>> GetReservationsByDateWithRelationsAsync(DateTime date)

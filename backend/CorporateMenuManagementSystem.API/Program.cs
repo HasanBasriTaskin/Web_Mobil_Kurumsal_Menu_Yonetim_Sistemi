@@ -6,6 +6,9 @@ using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +23,8 @@ builder.Services.AddIdentity<AppUser, AppRole>()
     .AddEntityFrameworkStores<MenuContext>();
 
 // Dependency Injection Yapılandırması
+builder.Services.AddScoped<IAuthService, AuthManager>();
+builder.Services.AddScoped<ITokenService, TokenManager>();
 builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
@@ -32,6 +37,24 @@ builder.Services.AddScoped<IFeedbackService, FeedbackManager>();
 builder.Services.AddScoped<IReservationService, ReservationManager>();
 
 
+// JWT Authentication Yapılandırması
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+        ValidAudience = builder.Configuration["JwtSettings:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]))
+    };
+});
 
 
 builder.Services.AddControllers();
@@ -76,6 +99,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication(); 
 app.UseAuthorization();
 
 app.MapControllers();
