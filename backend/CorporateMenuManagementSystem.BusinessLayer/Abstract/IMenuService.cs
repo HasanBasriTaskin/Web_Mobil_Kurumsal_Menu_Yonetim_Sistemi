@@ -1,17 +1,17 @@
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Menu;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
-    public interface IMenuService : IGenericService<Menu>
+    public interface IMenuService
     {
-        Task<Menu> GetMenuByDateWithRelationsAsync(DateTime date);
-        Task<List<Menu>> GetTopRatedMenusAsync(int count);
-        Task<Response<Menu>> CreateMenuAsync(Menu menu);
-        Task<Response<Menu>> UpdateMenuAsync(Menu menu);
+        Task<Response<MenuDto>> GetMenuByDateWithRelationsAsync(DateTime date);
+        Task<Response<List<MenuDto>>> GetTopRatedMenusAsync(int count);
+        Task<Response<MenuDto>> CreateMenuAsync(CreateMenuDto createMenuDto);
+        Task<Response<MenuDto>> UpdateMenuAsync(int menuId, UpdateMenuDto updateMenuDto);
         Task<Response<NoContentDto>> DeleteMenuAsync(int menuId, bool force = false);
     }
 }

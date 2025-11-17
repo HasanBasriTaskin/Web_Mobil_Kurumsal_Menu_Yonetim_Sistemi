@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace CorporateMenuManagementSystem.EntityLayer.Entitites
 {
-    public class AppRole : IdentityRole<string>
+    public class AppRole : IdentityRole
     {
         [Required(ErrorMessage = "Açıklama alanı zorunludur.")]
         [MaxLength(500, ErrorMessage = "Açıklama 500 karakterden fazla olamaz.")]

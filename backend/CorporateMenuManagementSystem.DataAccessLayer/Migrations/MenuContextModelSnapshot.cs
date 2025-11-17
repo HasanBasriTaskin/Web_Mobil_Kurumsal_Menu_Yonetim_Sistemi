@@ -157,7 +157,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Migrations
 
                     b.HasIndex("MenuId");
 
-                    b.ToTable("Feedbacks");
+                    b.ToTable("Feedbacks", (string)null);
                 });
 
             modelBuilder.Entity("CorporateMenuManagementSystem.EntityLayer.Entitites.Menu", b =>
@@ -195,7 +195,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Menus");
+                    b.ToTable("Menus", (string)null);
                 });
 
             modelBuilder.Entity("CorporateMenuManagementSystem.EntityLayer.Entitites.Notification", b =>
@@ -230,7 +230,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Migrations
 
                     b.HasIndex("AppUserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("CorporateMenuManagementSystem.EntityLayer.Entitites.Reservation", b =>
@@ -260,7 +260,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Migrations
 
                     b.HasIndex("MenuId");
 
-                    b.ToTable("Reservations");
+                    b.ToTable("Reservations", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
