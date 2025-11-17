@@ -6,3 +6,5 @@ namespace CorporateMenuManagementSystem.EntityLayer.Enums
         CANCELLED
     }
 }
+
+

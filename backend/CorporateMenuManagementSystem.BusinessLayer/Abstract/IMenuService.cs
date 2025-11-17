@@ -1,3 +1,4 @@
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using System;
 using System.Collections.Generic;
@@ -9,5 +10,8 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
     {
         Task<Menu> GetMenuByDateWithRelationsAsync(DateTime date);
         Task<List<Menu>> GetTopRatedMenusAsync(int count);
+        Task<Response<Menu>> CreateMenuAsync(Menu menu);
+        Task<Response<Menu>> UpdateMenuAsync(Menu menu);
+        Task<Response<object>> DeleteMenuAsync(int menuId, bool force = false);
     }
 }
