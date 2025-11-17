@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using CorporateMenuManagementSystem.API.Mappings;
+using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.DataSeeder;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,28 +70,22 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Veritabanı ve Başlangıç Verilerini Hazırlama
+// Veritabanı Hazırlama ve Veri Tohumlama
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    var loggerFactory = services.GetRequiredService<ILoggerFactory>();
-    try
+    var context = services.GetRequiredService<MenuContext>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
+    var configuration = services.GetRequiredService<IConfiguration>();
+
+    await context.Database.MigrateAsync();
+    await SeedData.Initialize(services, userManager, roleManager, configuration);
+
+    // Sadece Geliştirme Ortamında ve ayar aktif ise sahte veri bas
+    if (app.Environment.IsDevelopment() && configuration.GetValue<bool>("DataFakerSettings:IsEnabled"))
     {
-        var context = services.GetRequiredService<MenuContext>();
-        var userManager = services.GetRequiredService<UserManager<AppUser>>();
-        var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
-        var configuration = services.GetRequiredService<IConfiguration>();
-        
-        // Bekleyen migration'ları uygula veya veritabanını oluştur
-        await context.Database.MigrateAsync();
-        
-        // Başlangıç verilerini (roller ve admin) ekle
-        await SeedData.Initialize(services, userManager, roleManager, configuration);
-    }
-    catch (Exception ex)
-    {
-        var logger = loggerFactory.CreateLogger<Program>();
-        logger.LogError(ex, "Uygulama başlangıcında bir hata oluştu.");
+        await DataGenerator.SeedAsync(context, userManager, configuration);
     }
 }
 
