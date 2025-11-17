@@ -1,3 +1,7 @@
+using CorporateMenuManagementSystem.BusinessLayer.Abstract;
+using CorporateMenuManagementSystem.BusinessLayer.Concrete;
+using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
+using CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories;
 using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Microsoft.AspNetCore.Identity;
@@ -14,6 +18,20 @@ builder.Services.AddDbContext<MenuContext>(options =>
 
 builder.Services.AddIdentity<AppUser, AppRole>()
     .AddEntityFrameworkStores<MenuContext>();
+
+// Dependency Injection Yapılandırması
+builder.Services.AddScoped<IMenuRepository, MenuRepository>();
+builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
+builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+
+
+builder.Services.AddScoped<IMenuService, MenuManager>();
+builder.Services.AddScoped<INotificationService, NotificationManager>();
+builder.Services.AddScoped<IFeedbackService, FeedbackManager>();
+builder.Services.AddScoped<IReservationService, ReservationManager>();
+
+
 
 
 builder.Services.AddControllers();
