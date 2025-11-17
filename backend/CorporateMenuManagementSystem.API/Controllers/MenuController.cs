@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api")]
     [ApiController]
     public class MenuController : ControllerBase
     {
@@ -19,21 +19,18 @@ namespace CorporateMenuManagementSystem.API.Controllers
         }
 
         // GET: api/menu/today
-        [HttpGet("today")]
+        [HttpGet("menu/today")]
         public async Task<IActionResult> GetTodayMenu()
         {
-            // Implementation for getting today's menu
-            return Ok();
+            var result = await _menuService.GetMenuByDateWithRelationsAsync(DateTime.Today);
+            return StatusCode(result.StatusCode, result);
         }
 
-        [HttpGet("weekly")]
+        [HttpGet("menu/weekly")]
         public async Task<IActionResult> GetWeeklyMenu([FromQuery] string week = "current")
         {
             var result = await _menuService.GetWeeklyMenusAsync(week);
-            return new ObjectResult(result)
-            {
-                StatusCode = result.StatusCode
-            };
+            return StatusCode(result.StatusCode, result);
         }
         
         // GET: api/menu/top-rated
@@ -43,49 +40,36 @@ namespace CorporateMenuManagementSystem.API.Controllers
             var result = await _menuService.GetTopRatedMenusAsync(count);
             return Ok(result);
         }
-    }
 
-    [Route("api/admin/[controller]")]
-    [ApiController]
-    [Authorize(Roles = "Admin")]
-    public class AdminMenuController : ControllerBase
-    {
-        private readonly IMenuService _menuService;
-
-        public AdminMenuController(IMenuService menuService)
-        {
-            _menuService = menuService;
-        }
-
-
-        [HttpPost]
+        // POST: api/admin/menu
+        [Authorize(Roles = "Admin")]
+        [HttpPost("admin/menu")]
         public async Task<IActionResult> CreateMenu([FromBody] CreateMenuDto createMenuDto)
         {
             var result = await _menuService.CreateMenuAsync(createMenuDto);
-            return new ObjectResult(result)
+            if (result.IsSuccessful)
             {
-                StatusCode = result.StatusCode
-            };
+                return CreatedAtAction(nameof(GetTodayMenu), new { id = result.Data.Id }, result);
+            }
+            return StatusCode(result.StatusCode, result);
         }
 
-        [HttpPut("{id}")]
+        // PUT: api/admin/menu/{id}
+        [Authorize(Roles = "Admin")]
+        [HttpPut("admin/menu/{id}")]
         public async Task<IActionResult> UpdateMenu(int id, [FromBody] UpdateMenuDto updateMenuDto)
         {
             var result = await _menuService.UpdateMenuAsync(id, updateMenuDto);
-            return new ObjectResult(result)
-            {
-                StatusCode = result.StatusCode
-            };
+            return StatusCode(result.StatusCode, result);
         }
 
-        [HttpDelete("{id}")]
+        // DELETE: api/admin/menu/{id}
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("admin/menu/{id}")]
         public async Task<IActionResult> DeleteMenu(int id, [FromQuery] bool force = false)
         {
             var result = await _menuService.DeleteMenuAsync(id, force);
-            return new ObjectResult(result)
-            {
-                StatusCode = result.StatusCode
-            };
+            return StatusCode(result.StatusCode, result);
         }
     }
 }
