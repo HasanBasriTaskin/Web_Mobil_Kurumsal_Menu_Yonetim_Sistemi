@@ -41,12 +41,24 @@ const navigation = [
       </svg>
     )
   },
+  { 
+    name: 'Rezervasyonlarım', 
+    href: '/user/rezervasyonlarim',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    )
+  },
 ];
 
 export default function UserLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [userInfo, setUserInfo] = useState({ name: 'Kullanıcı', email: 'user@company.com' });
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     // Kullanıcı bilgilerini localStorage'dan al
@@ -64,7 +76,29 @@ export default function UserLayout({ children }) {
         }
       }
     }
+    loadNotifications();
   }, []);
+
+  // Bildirimleri yükle
+  const loadNotifications = async () => {
+    try {
+      // API çağrısı yapılacak
+      // const response = await apiClient.get('/notifications');
+      // setNotifications(response.data.data || []);
+      // setUnreadCount(response.data.data.filter(n => !n.isRead).length);
+
+      // Mock data
+      const mockNotifications = [
+        { id: '1', message: 'Yeni menü eklendi!', isRead: false, createdAt: new Date().toISOString() },
+        { id: '2', message: 'Rezervasyonunuz onaylandı', isRead: false, createdAt: new Date().toISOString() },
+        { id: '3', message: 'Haftalık menü hazır', isRead: true, createdAt: new Date().toISOString() }
+      ];
+      setNotifications(mockNotifications);
+      setUnreadCount(mockNotifications.filter(n => !n.isRead).length);
+    } catch (err) {
+      console.error('Bildirimler yüklenemedi:', err);
+    }
+  };
 
   const handleLogout = () => {
     // Token'ı temizle (localStorage veya cookie'den)
@@ -166,7 +200,92 @@ export default function UserLayout({ children }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto relative">
+        {/* Üst Bar - Bildirimler */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+          <div></div>
+          <div className="flex items-center gap-4">
+            {/* Bildirim İkonu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Bildirim Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                  <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 className="font-semibold text-gray-900">Bildirimler</h3>
+                    <button
+                      onClick={() => setShowNotifications(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {notifications.length > 0 ? (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`p-4 hover:bg-gray-50 cursor-pointer ${
+                            !notification.isRead ? 'bg-blue-50' : ''
+                          }`}
+                          onClick={() => {
+                            // Bildirimi okundu olarak işaretle
+                            setNotifications(prev =>
+                              prev.map(n =>
+                                n.id === notification.id ? { ...n, isRead: true } : n
+                              )
+                            );
+                            setUnreadCount(prev => Math.max(0, prev - 1));
+                          }}
+                        >
+                          <p className="text-sm text-gray-900">{notification.message}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(notification.createdAt).toLocaleDateString('tr-TR', {
+                              day: 'numeric',
+                              month: 'long',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center">
+                        <p className="text-gray-500 text-sm">Bildirim bulunmamaktadır.</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 border-t border-gray-200">
+                    <Link
+                      href="/user/bildirimler"
+                      onClick={() => setShowNotifications(false)}
+                      className="block text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Tümünü Gör
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* İçerik */}
         {children}
       </main>
     </div>

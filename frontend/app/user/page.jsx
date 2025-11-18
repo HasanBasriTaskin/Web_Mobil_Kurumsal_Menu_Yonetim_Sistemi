@@ -9,7 +9,7 @@ export default function UserPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Yıldız puanlama için state
+  // Puanlama ve yorum için state
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
@@ -79,8 +79,31 @@ export default function UserPage() {
     }
   };
 
+  // İptal edilebilir mi kontrol et (bugün için belirli saate kadar)
+  // Öğlen yemeği 11:30 - 14:00 arası, iptal için son saat: 10:30 (11:30'dan 1 saat önce)
+  const canCancelToday = () => {
+    if (reservationStatus !== 'reserved') return false;
+    
+    const now = new Date();
+    const cancelDeadline = new Date();
+    cancelDeadline.setHours(10, 30, 0, 0); // Sabah 10:30 - bu saat backend'den config olarak alınabilir
+    
+    // Eğer şu an saat 10:30'u geçtiyse iptal edilemez
+    return now < cancelDeadline;
+  };
+
   // Rezervasyon iptal et
   const handleCancelReservation = async () => {
+    // Önce saat kontrolü yap
+    if (!canCancelToday()) {
+      alert('Üzgünüz, bugünkü rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
+      return;
+    }
+
+    if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
+      return;
+    }
+
     try {
       const today = new Date().toISOString().split('T')[0];
       // API çağrısı
@@ -90,15 +113,35 @@ export default function UserPage() {
       setReservationStatus('not_reserved');
       alert('Rezervasyonunuz iptal edildi.');
     } catch (err) {
-      alert('Rezervasyon iptal edilirken bir hata oluştu.');
+      // Backend'den hata gelirse (örn: saat geçmişse) göster
+      const errorMessage = err.response?.data?.message || 'Rezervasyon iptal edilirken bir hata oluştu.';
+      alert(errorMessage);
     }
   };
 
-  // Geri bildirim gönder
+  // Puanlama gönderebilir mi kontrol et (yemek yedikten sonra - 11:30'dan sonra)
+  const canSubmitFeedback = () => {
+    if (!todayMenu) return false;
+    
+    const now = new Date();
+    const mealStartTime = new Date();
+    mealStartTime.setHours(11, 30, 0, 0); // Öğlen yemeği 11:30'da başlıyor
+    
+    // Yemek saati başladıysa puanlama yapılabilir
+    return now >= mealStartTime;
+  };
+
+  // Puanlama ve yorum gönder
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
+    
+    if (!canSubmitFeedback()) {
+      alert('Puanlama yapabilmek için yemek saatini beklemeniz gerekmektedir (11:30).');
+      return;
+    }
+
     if (rating === 0) {
-      alert('Lütfen bir puan seçiniz.');
+      alert('Lütfen 1-5 arası bir puan seçiniz.');
       return;
     }
 
@@ -113,12 +156,12 @@ export default function UserPage() {
       // });
 
       // Mock - başarılı
-      alert('Geri bildiriminiz için teşekkür ederiz!');
+      alert('Puanlamanız için teşekkür ederiz!');
       setRating(0);
       setComment('');
       setSubmittingFeedback(false);
     } catch (err) {
-      alert('Geri bildirim gönderilirken bir hata oluştu.');
+      alert('Puanlama gönderilirken bir hata oluştu.');
       setSubmittingFeedback(false);
     }
   };
@@ -212,13 +255,32 @@ export default function UserPage() {
                   <span className="font-semibold text-green-800">Rezervasyonunuz Yapıldı</span>
                 </div>
                 <p className="text-sm text-green-700">Bugünkü menü için rezervasyonunuz bulunmaktadır.</p>
+                {!canCancelToday() && (
+                  <div className="mt-3 pt-3 border-t border-green-200">
+                    <p className="text-xs text-yellow-700 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      İptal için son saat geçti (10:30)
+                    </p>
+                  </div>
+                )}
               </div>
-              <button
-                onClick={handleCancelReservation}
-                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-              >
-                Rezervasyonu İptal Et
-              </button>
+              {canCancelToday() ? (
+                <button
+                  onClick={handleCancelReservation}
+                  className="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                >
+                  Rezervasyonu İptal Et
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="w-full px-4 py-2 bg-gray-300 text-gray-500 rounded-lg font-medium cursor-not-allowed"
+                >
+                  İptal Edilemez
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -242,63 +304,84 @@ export default function UserPage() {
         </div>
       </div>
 
-      {/* Geri Bildirim Formu */}
+      {/* Puanlama Formu - Sadece bugünün menüsü için, yemek yedikten sonra aktif */}
       {todayMenu && (
-        <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Geri Bildirim</h2>
-          
-          <form onSubmit={handleSubmitFeedback} className="space-y-4">
-            {/* Puanlama */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Menüyü Değerlendirin (1-5 yıldız)
-              </label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    className="focus:outline-none"
-                  >
-                    <svg
-                      className={`w-8 h-8 ${
-                        star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                      }`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  </button>
-                ))}
+        <div className="mt-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Menüyü Değerlendirin</h2>
+            
+            {!canSubmitFeedback() ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-yellow-700">
+                    Puanlama yapabilmek için yemek saatini beklemeniz gerekmektedir (11:30).
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <form onSubmit={handleSubmitFeedback} className="space-y-4">
+                {/* Hızlı Puanlama - 1-5 Yıldız */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Puanınız (1-5 yıldız)
+                  </label>
+                  <div className="flex gap-2 justify-center">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        className="focus:outline-none transition-transform hover:scale-110"
+                        title={`${star} yıldız`}
+                      >
+                        <svg
+                          className={`w-10 h-10 transition-colors ${
+                            star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300 hover:text-yellow-200'
+                          }`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                  {rating > 0 && (
+                    <p className="text-center text-sm text-gray-600 mt-2">
+                      Seçilen puan: {rating} yıldız
+                    </p>
+                  )}
+                </div>
 
-            {/* Yorum */}
-            <div>
-              <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
-                Yorumunuz (Opsiyonel)
-              </label>
-              <textarea
-                id="comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                rows="3"
-                placeholder="Menü hakkında düşüncelerinizi paylaşın..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
+                {/* Yorum Kutusu (Opsiyonel) */}
+                <div>
+                  <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
+                    Yorumunuz (Opsiyonel)
+                  </label>
+                  <textarea
+                    id="comment"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    rows="3"
+                    placeholder="Menü hakkında düşüncelerinizi paylaşın..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                  />
+                </div>
 
-            {/* Gönder Butonu */}
-            <button
-              type="submit"
-              disabled={submittingFeedback}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submittingFeedback ? 'Gönderiliyor...' : 'Geri Bildirim Gönder'}
-            </button>
-          </form>
+                {/* Gönder Butonu */}
+                <button
+                  type="submit"
+                  disabled={submittingFeedback || rating === 0}
+                  className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingFeedback ? 'Gönderiliyor...' : 'Puanlamayı Gönder'}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       )}
     </div>

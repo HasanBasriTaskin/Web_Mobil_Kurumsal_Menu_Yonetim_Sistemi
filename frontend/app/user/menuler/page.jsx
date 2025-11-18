@@ -7,6 +7,8 @@ export default function MenulerPage() {
   const [currentWeekMenu, setCurrentWeekMenu] = useState([]);
   const [nextWeekMenu, setNextWeekMenu] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState('current');
+  const [viewMode, setViewMode] = useState('week'); // 'week', 'list', 'daily'
+  const [selectedDate, setSelectedDate] = useState(null); // Günlük görünüm için
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reservations, setReservations] = useState([]);
@@ -59,10 +61,16 @@ export default function MenulerPage() {
           const date = new Date(monday);
           date.setDate(monday.getDate() + i);
           const dateStr = date.toISOString().split('T')[0];
+          
+          // 23 Kasım kontrolü
+          let soup = ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün', 'Lentil'][i];
+          if (date.getDate() === 23 && date.getMonth() === 10) { // Kasım = 10 (0-indexed)
+            soup = 'Yayla Çorbası'; // 23 Kasım için özel çorba
+          }
 
           mockCurrentWeek.push({
             date: dateStr,
-            soup: ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün', 'Lentil'][i],
+            soup: soup,
             mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto'][i] || 'Yemek',
             sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı'][i] || 'Yan Yemek',
             dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani'][i] || 'Tatlı',
@@ -108,8 +116,42 @@ export default function MenulerPage() {
     return dateStr === today;
   };
 
+  // İptal edilebilir mi kontrol et (bugün için belirli saate kadar)
+  // Öğlen yemeği 11:30 - 14:00 arası, iptal için son saat: 10:30 (11:30'dan 1 saat önce)
+  const canCancel = (dateStr) => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Bugün değilse her zaman iptal edilebilir
+    if (dateStr !== today) return true;
+    
+    // Bugün ise saat 10:30'u geçtiyse iptal edilemez
+    const now = new Date();
+    const cancelDeadline = new Date();
+    cancelDeadline.setHours(10, 30, 0, 0); // Sabah 10:30 (yemek 11:30'da başlıyor)
+    
+    return now < cancelDeadline;
+  };
+
   const weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
   const selectedMenu = selectedWeek === 'current' ? currentWeekMenu : nextWeekMenu;
+  
+  // Günlük görünüm için menü seç
+  useEffect(() => {
+    if (viewMode === 'daily' && selectedMenu.length > 0 && !selectedDate) {
+      // Bugünün menüsünü varsayılan olarak seç
+      const today = new Date().toISOString().split('T')[0];
+      const todayMenu = selectedMenu.find(m => m.date === today);
+      setSelectedDate(todayMenu ? todayMenu.date : selectedMenu[0].date);
+    }
+    // selectedMenu değiştiğinde ve günlük görünüm aktifse güncelle
+    if (viewMode === 'daily' && selectedMenu.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const todayMenu = selectedMenu.find(m => m.date === today);
+      if (!selectedDate || !selectedMenu.find(m => m.date === selectedDate)) {
+        setSelectedDate(todayMenu ? todayMenu.date : selectedMenu[0].date);
+      }
+    }
+  }, [viewMode, selectedWeek]); // selectedWeek değiştiğinde tetiklenir
 
   if (loading) {
     return (
@@ -125,7 +167,7 @@ export default function MenulerPage() {
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Haftalık Menü</h1>
         <p className="text-gray-600">Bu hafta ve gelecek hafta menülerini görüntüleyebilirsiniz</p>
       </div>
@@ -136,9 +178,43 @@ export default function MenulerPage() {
         </div>
       )}
 
-      {/* Hafta Seçimi */}
+      {/* Görünüm Modları */}
       <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="flex gap-4">
+        <div className="flex gap-4 mb-4">
+          <button
+            onClick={() => setViewMode('week')}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'week'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Haftalık Görünüm
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Liste Görünümü
+          </button>
+          <button
+            onClick={() => setViewMode('daily')}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'daily'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Günlük Görünüm
+          </button>
+        </div>
+
+        {/* Hafta Seçimi */}
+        <div className="flex gap-4 border-t border-gray-200 pt-4">
           <button
             onClick={() => setSelectedWeek('current')}
             className={`px-6 py-2 rounded-lg font-medium transition-colors ${
@@ -162,9 +238,12 @@ export default function MenulerPage() {
         </div>
       </div>
 
-      {/* Menü Kartları */}
+      {/* Menü Görünümleri */}
       {selectedMenu.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <>
+          {/* Haftalık Görünüm */}
+          {viewMode === 'week' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {selectedMenu.map((menu) => {
             const isTodayMenu = isToday(menu.date);
             return (
@@ -213,9 +292,20 @@ export default function MenulerPage() {
                 {!isTodayMenu && (() => {
                   const isReserved = reservations.includes(menu.date);
                   const isReserving = reserving === menu.date;
+                  const cancelable = isReserved ? canCancel(menu.date) : true;
                   
                   const handleReservation = async () => {
                     if (isReserved) {
+                      // Önce saat kontrolü yap
+                      if (!canCancel(menu.date)) {
+                        alert('Üzgünüz, bu rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
+                        return;
+                      }
+
+                      if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
+                        return;
+                      }
+
                       // Rezervasyon iptal et
                       try {
                         setReserving(menu.date);
@@ -227,7 +317,9 @@ export default function MenulerPage() {
                         setReserving('');
                         alert('Rezervasyonunuz iptal edildi.');
                       } catch (err) {
-                        alert('Rezervasyon iptal edilirken bir hata oluştu.');
+                        // Backend'den hata gelirse (örn: saat geçmişse) göster
+                        const errorMessage = err.response?.data?.message || 'Rezervasyon iptal edilirken bir hata oluştu.';
+                        alert(errorMessage);
                         setReserving('');
                       }
                     } else {
@@ -249,23 +341,307 @@ export default function MenulerPage() {
                   };
 
                   return (
-                    <button
-                      onClick={handleReservation}
-                      disabled={isReserving}
-                      className={`mt-4 w-full px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
-                        isReserved
-                          ? 'bg-red-600 text-white hover:bg-red-700'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {isReserving ? 'İşleniyor...' : isReserved ? 'Rezervasyonu İptal Et' : 'Rezervasyon Yap'}
-                    </button>
+                    <div className="mt-4 space-y-2">
+                      <button
+                        onClick={handleReservation}
+                        disabled={isReserving || (isReserved && !cancelable)}
+                        className={`w-full px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                          isReserved
+                            ? cancelable
+                              ? 'bg-red-600 text-white hover:bg-red-700'
+                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {isReserving ? 'İşleniyor...' : 
+                         isReserved ? (cancelable ? 'Rezervasyonu İptal Et' : 'İptal Edilemez') : 
+                         'Rezervasyon Yap'}
+                      </button>
+                      {isReserved && !cancelable && (
+                        <p className="text-xs text-gray-500 text-center">
+                          İptal için son saat geçti (10:30)
+                        </p>
+                      )}
+                    </div>
                   );
                 })()}
               </div>
             );
           })}
-        </div>
+            </div>
+          )}
+
+          {/* Liste Görünümü */}
+          {viewMode === 'list' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 divide-y divide-gray-200">
+              {selectedMenu.map((menu) => {
+                const isTodayMenu = isToday(menu.date);
+                const isReserved = reservations.includes(menu.date);
+                const cancelable = isReserved ? canCancel(menu.date) : true;
+
+                return (
+                  <div
+                    key={menu.date}
+                    className={`p-6 ${isTodayMenu ? 'bg-blue-50' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-6">
+                      {/* Sol Taraf - Tarih ve Menü */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {formatDate(menu.date)}
+                          </h3>
+                          {isTodayMenu && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                              Bugün
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 w-24">Çorba:</span>
+                            <span className="text-gray-900 font-medium">{menu.soup}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 w-24">Ana Yemek:</span>
+                            <span className="text-gray-900 font-medium">{menu.mainCourse}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 w-24">Yan Yemek:</span>
+                            <span className="text-gray-900 font-medium">{menu.sideDish}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 w-24">Tatlı:</span>
+                            <span className="text-gray-900 font-medium">{menu.dessert}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className="text-gray-500 text-xs">Kalori:</span>
+                            <span className="text-gray-700 text-xs font-medium">{menu.calories} kcal</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sağ Taraf - Rezervasyon Butonu */}
+                      {!isTodayMenu && (
+                        <div className="flex-shrink-0">
+                          {(() => {
+                            const handleReservation = async () => {
+                              if (isReserved) {
+                                if (!canCancel(menu.date)) {
+                                  alert('Üzgünüz, bu rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
+                                  return;
+                                }
+                                if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
+                                  return;
+                                }
+                                try {
+                                  setReserving(menu.date);
+                                  setReservations(prev => prev.filter(d => d !== menu.date));
+                                  setReserving('');
+                                  alert('Rezervasyonunuz iptal edildi.');
+                                } catch (err) {
+                                  alert('Rezervasyon iptal edilirken bir hata oluştu.');
+                                  setReserving('');
+                                }
+                              } else {
+                                try {
+                                  setReserving(menu.date);
+                                  setReservations(prev => [...prev, menu.date]);
+                                  setReserving('');
+                                  alert('Rezervasyonunuz başarıyla oluşturuldu!');
+                                } catch (err) {
+                                  alert('Rezervasyon yapılırken bir hata oluştu.');
+                                  setReserving('');
+                                }
+                              }
+                            };
+
+                            return (
+                              <button
+                                onClick={handleReservation}
+                                disabled={reserving === menu.date || (isReserved && !cancelable)}
+                                className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                                  isReserved
+                                    ? cancelable
+                                      ? 'bg-red-600 text-white hover:bg-red-700'
+                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                              >
+                                {reserving === menu.date ? 'İşleniyor...' : 
+                                 isReserved ? (cancelable ? 'İptal Et' : 'İptal Edilemez') : 
+                                 'Rezervasyon Yap'}
+                              </button>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Günlük Görünüm */}
+          {viewMode === 'daily' && (
+            <div className="space-y-6">
+              {/* Gün Seçici */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {selectedMenu.map((menu) => {
+                    const isTodayMenu = isToday(menu.date);
+                    const isSelected = selectedDate === menu.date;
+                    return (
+                      <button
+                        key={menu.date}
+                        onClick={() => setSelectedDate(menu.date)}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                          isSelected
+                            ? 'bg-blue-600 text-white'
+                            : isTodayMenu
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {formatDate(menu.date)}
+                        {isTodayMenu && ' (Bugün)'}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Seçili Günün Menüsü */}
+              {selectedDate && (() => {
+                const menu = selectedMenu.find(m => m.date === selectedDate);
+                if (!menu) return null;
+                const isTodayMenu = isToday(menu.date);
+                const isReserved = reservations.includes(menu.date);
+                const cancelable = isReserved ? canCancel(menu.date) : true;
+
+                return (
+                  <div className="bg-white rounded-lg shadow-sm border-2 border-blue-200 p-8">
+                    <div className="flex items-center gap-3 mb-6">
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        {formatDate(menu.date)}
+                      </h2>
+                      {isTodayMenu && (
+                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                          Bugün
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-6">
+                      {/* Menü Detayları */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div className="border-b border-gray-200 pb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-2xl">🍲</span>
+                              <span className="text-sm font-medium text-gray-600">Çorba</span>
+                            </div>
+                            <p className="text-lg font-semibold text-gray-900">{menu.soup}</p>
+                          </div>
+
+                          <div className="border-b border-gray-200 pb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-2xl">🍽️</span>
+                              <span className="text-sm font-medium text-gray-600">Ana Yemek</span>
+                            </div>
+                            <p className="text-lg font-semibold text-gray-900">{menu.mainCourse}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="border-b border-gray-200 pb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-2xl">🥗</span>
+                              <span className="text-sm font-medium text-gray-600">Yan Yemek</span>
+                            </div>
+                            <p className="text-lg font-semibold text-gray-900">{menu.sideDish}</p>
+                          </div>
+
+                          <div className="border-b border-gray-200 pb-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-2xl">🍰</span>
+                              <span className="text-sm font-medium text-gray-600">Tatlı</span>
+                            </div>
+                            <p className="text-lg font-semibold text-gray-900">{menu.dessert}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-500">Toplam Kalori:</span>
+                          <span className="text-lg font-semibold text-gray-900">{menu.calories} kcal</span>
+                        </div>
+                      </div>
+
+                      {/* Rezervasyon Butonu */}
+                      {!isTodayMenu && (
+                        <div className="pt-4 border-t border-gray-200">
+                          {(() => {
+                            const handleReservation = async () => {
+                              if (isReserved) {
+                                if (!canCancel(menu.date)) {
+                                  alert('Üzgünüz, bu rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
+                                  return;
+                                }
+                                if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
+                                  return;
+                                }
+                                try {
+                                  setReserving(menu.date);
+                                  setReservations(prev => prev.filter(d => d !== menu.date));
+                                  setReserving('');
+                                  alert('Rezervasyonunuz iptal edildi.');
+                                } catch (err) {
+                                  alert('Rezervasyon iptal edilirken bir hata oluştu.');
+                                  setReserving('');
+                                }
+                              } else {
+                                try {
+                                  setReserving(menu.date);
+                                  setReservations(prev => [...prev, menu.date]);
+                                  setReserving('');
+                                  alert('Rezervasyonunuz başarıyla oluşturuldu!');
+                                } catch (err) {
+                                  alert('Rezervasyon yapılırken bir hata oluştu.');
+                                  setReserving('');
+                                }
+                              }
+                            };
+
+                            return (
+                              <button
+                                onClick={handleReservation}
+                                disabled={reserving === menu.date || (isReserved && !cancelable)}
+                                className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
+                                  isReserved
+                                    ? cancelable
+                                      ? 'bg-red-600 text-white hover:bg-red-700'
+                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                              >
+                                {reserving === menu.date ? 'İşleniyor...' : 
+                                 isReserved ? (cancelable ? 'Rezervasyonu İptal Et' : 'İptal Edilemez') : 
+                                 'Rezervasyon Yap'}
+                              </button>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
           <p className="text-gray-500 text-lg">Bu hafta için menü bulunmamaktadır.</p>

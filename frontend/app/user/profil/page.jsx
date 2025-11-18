@@ -212,7 +212,7 @@ export default function ProfilPage() {
                 type="text"
                 value={userInfo.name}
                 onChange={(e) => setUserInfo({ ...userInfo, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
                 readOnly
               />
               <p className="mt-1 text-xs text-gray-500">Bu bilgi sistem yöneticisi tarafından yönetilmektedir.</p>
@@ -225,7 +225,7 @@ export default function ProfilPage() {
               <input
                 type="email"
                 value={userInfo.email}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none cursor-not-allowed"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none cursor-not-allowed text-gray-900"
                 readOnly
               />
               <p className="mt-1 text-xs text-gray-500">E-posta adresi değiştirilemez.</p>
@@ -240,7 +240,7 @@ export default function ProfilPage() {
                 value={userInfo.department || ''}
                 onChange={(e) => setUserInfo({ ...userInfo, department: e.target.value })}
                 placeholder="Departmanınızı giriniz"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
               />
             </div>
           </div>
