@@ -14,6 +14,10 @@ export default function UserPage() {
   const [comment, setComment] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   
+  // Diğer çalışanların yorumları için state
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  
   // Rezervasyon iptal onay mesajı için state
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
@@ -21,6 +25,41 @@ export default function UserPage() {
   useEffect(() => {
     loadTodayMenu();
     loadReservationStatus();
+    loadComments();
+    
+    // Rezervasyon durumunu periyodik olarak kontrol et
+    const interval = setInterval(() => {
+      loadReservationStatus();
+    }, 1000); // Her saniye kontrol et
+    
+    // Storage event listener ekle (diğer sayfalardan güncelleme için)
+    const handleStorageChange = (e) => {
+      if (e.key === 'user_reservations') {
+        loadReservationStatus();
+      }
+    };
+    
+    // Custom event listener (aynı sayfa içi güncellemeler için)
+    const handleCustomStorageChange = () => {
+      loadReservationStatus();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('reservationUpdated', handleCustomStorageChange);
+    
+    // Sayfa focus olduğunda da kontrol et
+    const handleFocus = () => {
+      loadReservationStatus();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('reservationUpdated', handleCustomStorageChange);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   // Bugünün menüsünü yükle
@@ -51,25 +90,32 @@ export default function UserPage() {
   };
 
   // Rezervasyon durumunu kontrol et
-  const loadReservationStatus = async () => {
-    try {
-      // API çağrısı yapılacak
-      // const response = await apiClient.get('/reservations/me');
-      // const today = new Date().toISOString().split('T')[0];
-      // const todayReservation = response.data.data.find(r => r.date === today);
-      // setReservationStatus(todayReservation ? 'reserved' : 'not_reserved');
-
-      // Mock data
-      setTimeout(() => {
-        setReservationStatus('not_reserved');
-      }, 500);
-    } catch (err) {
-      console.error('Rezervasyon durumu yüklenemedi:', err);
+  const loadReservationStatus = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const savedReservations = localStorage.getItem('user_reservations');
+    if (savedReservations) {
+      const reservations = JSON.parse(savedReservations);
+      const hasReservation = reservations.includes(today);
+      setReservationStatus(hasReservation ? 'reserved' : 'not_reserved');
+    } else {
+      setReservationStatus('not_reserved');
     }
+  };
+
+  // Bugün için rezervasyon yapılabilir mi kontrolü
+  // Bugün için rezervasyon önceki günün sonuna kadar yapılmalı (bugün 00:00'dan sonra yapılamaz)
+  const canMakeReservationToday = () => {
+    // Bugün için rezervasyon yapılamaz, önceki günün sonuna kadar yapılmalı
+    return false;
   };
 
   // Rezervasyon yap
   const handleReservation = async () => {
+    // Bugün için rezervasyon yapılamaz kontrolü
+    if (!canMakeReservationToday()) {
+      return;
+    }
+
     try {
       const today = new Date().toISOString().split('T')[0];
       // API çağrısı
@@ -147,6 +193,79 @@ export default function UserPage() {
     return now >= mealStartTime;
   };
 
+  // Yorumları yükle
+  const loadComments = async () => {
+    try {
+      setLoadingComments(true);
+      const today = new Date().toISOString().split('T')[0];
+      // API çağrısı yapılacak
+      // const response = await apiClient.get(`/feedback/${today}`);
+      // setComments(response.data.data);
+
+      // Mock data
+      setTimeout(() => {
+        setComments([
+          {
+            id: 'comment_1',
+            userName: 'Ahmet Yılmaz',
+            comment: 'Çok lezzetli bir menüydü, özellikle çorba harikaydı!',
+            rating: 5,
+            likes: 12,
+            userLiked: false,
+            createdAt: '2025-01-10T12:30:00'
+          },
+          {
+            id: 'comment_2',
+            userName: 'Ayşe Demir',
+            comment: 'Ana yemek biraz tuzsuzdu ama genel olarak iyi.',
+            rating: 4,
+            likes: 8,
+            userLiked: true,
+            createdAt: '2025-01-10T13:15:00'
+          },
+          {
+            id: 'comment_3',
+            userName: 'Mehmet Kaya',
+            comment: 'Tatlı çok güzel olmuş, teşekkürler!',
+            rating: 5,
+            likes: 15,
+            userLiked: false,
+            createdAt: '2025-01-10T13:45:00'
+          }
+        ]);
+        setLoadingComments(false);
+      }, 300);
+    } catch (err) {
+      setLoadingComments(false);
+      console.error('Yorumlar yüklenirken bir hata oluştu:', err);
+    }
+  };
+
+  // Yorum beğen
+  const handleLikeComment = async (commentId) => {
+    try {
+      // API çağrısı yapılacak
+      // await apiClient.post(`/feedback/${commentId}/like`);
+
+      // Mock - Beğeni durumunu güncelle
+      setComments(prevComments =>
+        prevComments.map(comment => {
+          if (comment.id === commentId) {
+            const newLiked = !comment.userLiked;
+            return {
+              ...comment,
+              userLiked: newLiked,
+              likes: newLiked ? comment.likes + 1 : comment.likes - 1
+            };
+          }
+          return comment;
+        })
+      );
+    } catch (err) {
+      console.error('Yorum beğenilirken bir hata oluştu:', err);
+    }
+  };
+
   // Puanlama ve yorum gönder
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
@@ -172,10 +291,11 @@ export default function UserPage() {
       // });
 
       // Mock - başarılı
-      alert('Puanlamanız için teşekkür ederiz!');
       setRating(0);
       setComment('');
       setSubmittingFeedback(false);
+      // Yorumlar listesini yeniden yükle
+      loadComments();
     } catch (err) {
       alert('Puanlama gönderilirken bir hata oluştu.');
       setSubmittingFeedback(false);
@@ -383,12 +503,23 @@ export default function UserPage() {
                 </div>
                 <p className="text-sm text-yellow-700">Bugünkü menü için henüz rezervasyon yapılmamıştır.</p>
               </div>
-              <button
-                onClick={handleReservation}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Rezervasyon Yap
-              </button>
+              {canMakeReservationToday() ? (
+                <button
+                  onClick={handleReservation}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Rezervasyon Yap
+                </button>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 text-center">
+                    Bugünün menüsü için rezervasyon yapılamaz. Rezervasyonlar önceki günün sonuna kadar (23:59:59) yapılmalıdır.
+                  </p>
+                  <p className="text-sm text-gray-600 text-center mt-2 font-medium">
+                    Yarın ve sonraki günler için rezervasyon yapmak için "Menüler" sayfasını kullanabilirsiniz.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -470,6 +601,84 @@ export default function UserPage() {
                   {submittingFeedback ? 'Gönderiliyor...' : 'Puanlamayı Gönder'}
                 </button>
               </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Diğer Çalışanların Yorumları */}
+      {todayMenu && canSubmitFeedback() && (
+        <div className="mt-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Diğer Çalışanların Yorumları</h2>
+            
+            {loadingComments ? (
+              <p className="text-center text-gray-500 py-4">Yorumlar yükleniyor...</p>
+            ) : comments.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">Henüz yorum yapılmamış.</p>
+            ) : (
+              <div className="space-y-4">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-gray-900">{comment.userName}</span>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <svg
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= comment.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                                }`}
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            ))}
+                          </div>
+                        </div>
+                        {comment.comment && (
+                          <p className="text-gray-700 mb-2">{comment.comment}</p>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          {new Date(comment.createdAt).toLocaleString('tr-TR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleLikeComment(comment.id)}
+                        className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-colors ${
+                          comment.userLiked
+                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <svg
+                          className={`w-5 h-5 ${comment.userLiked ? 'fill-current' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">{comment.likes}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

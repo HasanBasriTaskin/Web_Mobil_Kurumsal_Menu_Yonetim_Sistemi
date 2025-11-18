@@ -9,6 +9,9 @@ export default function RezervasyonlarimPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all'); // 'all', 'upcoming', 'past'
   const [cancelling, setCancelling] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [pendingCancel, setPendingCancel] = useState(null);
+  const [cancelMessage, setCancelMessage] = useState('');
 
   useEffect(() => {
     loadReservations();
@@ -28,28 +31,42 @@ export default function RezervasyonlarimPage() {
       // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
       setTimeout(() => {
         const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Pazar, 1 = Pazartesi, ...
+        // Pazartesi'ye git (hafta başı)
+        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() + diff);
+        monday.setHours(0, 0, 0, 0);
+        
+        // localStorage'dan rezerve edilen tarihleri al
+        const savedReservations = localStorage.getItem('user_reservations');
+        const reservedDates = savedReservations ? JSON.parse(savedReservations) : [];
+        
         const mockReservations = [];
 
-        // Gelecek rezervasyonlar (bugünden sonraki 7 gün)
-        for (let i = 1; i <= 5; i++) {
-          const date = new Date(today);
-          date.setDate(today.getDate() + i);
+        // Hafta başından itibaren gelecek rezervasyonlar (Pazartesi'den başla, 7 gün)
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + i);
           const dateStr = date.toISOString().split('T')[0];
-
-          mockReservations.push({
-            reservationId: `r_${i}`,
-            userId: 'u_12345',
-            date: dateStr,
-            status: 'CONFIRMED',
-            reservedAt: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
-            menu: {
-              soup: ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla'][i % 5],
-              mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto'][i % 5],
-              sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı'][i % 5],
-              dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani'][i % 5],
-              calories: 1000 + Math.floor(Math.random() * 300)
-            }
-          });
+          
+          // Sadece rezerve edilmiş ve gelecek tarihler için rezervasyon ekle
+          if (date >= today && reservedDates.includes(dateStr)) {
+            mockReservations.push({
+              reservationId: `r_${i}`,
+              userId: 'u_12345',
+              date: dateStr,
+              status: 'CONFIRMED',
+              reservedAt: new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000).toISOString(),
+              menu: {
+                soup: ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün', 'Lentil'][i % 7],
+                mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto', 'Adana Kebap', 'Lahmacun'][i % 7],
+                sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı', 'Patates', 'Sebze'][i % 7],
+                dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani', 'Trileçe', 'Künefe'][i % 7],
+                calories: 1000 + Math.floor(Math.random() * 300)
+              }
+            });
+          }
         }
 
         // Geçmiş rezervasyonlar (bugünden önceki 7 gün)
@@ -85,33 +102,66 @@ export default function RezervasyonlarimPage() {
     }
   };
 
+  // Rezervasyon iptal onayını göster
+  const handleCancelClick = (date) => {
+    setCancelMessage(''); // Önce mesajı temizle
+    setPendingCancel(date);
+    setShowCancelConfirm(true);
+  };
+
   // Rezervasyon iptal et
-  const handleCancelReservation = async (date) => {
-    // Önce saat kontrolü yap
-    if (!canCancel(date)) {
-      alert('Üzgünüz, bu rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
+  const handleCancelReservation = async () => {
+    if (!pendingCancel) {
+      setShowCancelConfirm(false);
       return;
     }
 
-    if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
+    // Önce saat kontrolü yap
+    if (!canCancel(pendingCancel)) {
+      setCancelMessage('Üzgünüz, bu rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
+      setShowCancelConfirm(true);
       return;
     }
+
+    const dateToCancel = pendingCancel; // State'ten önce al
+    setCancelling(dateToCancel);
+    setShowCancelConfirm(false);
 
     try {
-      setCancelling(date);
-      
       // API çağrısı yapılacak
-      // await apiClient.delete(`/reservations/${date}`);
+      // await apiClient.delete(`/reservations/${dateToCancel}`);
 
-      // Mock - rezervasyonu listeden kaldır
-      setReservations(prev => prev.filter(r => r.date !== date));
+      // localStorage'ı güncelle
+      const savedReservations = localStorage.getItem('user_reservations');
+      if (savedReservations) {
+        const reservations = JSON.parse(savedReservations);
+        const updatedReservations = reservations.filter(d => d !== dateToCancel);
+        localStorage.setItem('user_reservations', JSON.stringify(updatedReservations));
+      }
+      
+      // Custom event dispatch (diğer sayfalardan güncelleme için)
+      window.dispatchEvent(new Event('reservationUpdated'));
+      
+      // Rezervasyonu listeden kaldır
+      setReservations(prev => prev.filter(r => r.date !== dateToCancel));
+      
       setCancelling('');
-      alert('Rezervasyonunuz başarıyla iptal edildi.');
+      setPendingCancel(null);
+      setCancelMessage('Rezervasyonunuz iptal edildi.');
+      setShowCancelConfirm(true);
+      
+      // 2 saniye sonra mesajı kapat
+      setTimeout(() => {
+        setShowCancelConfirm(false);
+        setCancelMessage('');
+      }, 2000);
     } catch (err) {
       // Backend'den hata gelirse (örn: saat geçmişse) göster
       const errorMessage = err.response?.data?.message || 'Rezervasyon iptal edilirken bir hata oluştu.';
-      alert(errorMessage);
+      setCancelMessage(errorMessage);
+      setShowCancelConfirm(true);
       setCancelling('');
+      setPendingCancel(null);
     }
   };
 
@@ -187,7 +237,84 @@ export default function RezervasyonlarimPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-8 relative">
+      {/* Onay Mesajı Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            {cancelMessage ? (
+              // Hata veya başarı mesajı
+              <div className="text-center">
+                <div className={`mb-4 ${cancelMessage.includes('iptal edildi') ? 'text-green-600' : 'text-red-600'}`}>
+                  {cancelMessage.includes('iptal edildi') ? (
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 ${cancelMessage.includes('iptal edildi') ? 'text-green-800' : 'text-red-800'}`}>
+                  {cancelMessage.includes('iptal edildi') ? 'Başarılı' : 'Hata'}
+                </h3>
+                <p className={`text-sm mb-4 ${cancelMessage.includes('iptal edildi') ? 'text-green-700' : 'text-red-700'}`}>
+                  {cancelMessage}
+                </p>
+                <button
+                  onClick={() => {
+                    setShowCancelConfirm(false);
+                    setCancelMessage('');
+                    setPendingCancel(null);
+                  }}
+                  className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                >
+                  Tamam
+                </button>
+              </div>
+            ) : (
+              // Onay sorusu
+              <div className="text-center">
+                <div className="mb-4 text-yellow-600">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Rezervasyonu İptal Et
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Bu rezervasyonu iptal etmek istediğinize emin misiniz?
+                  {pendingCancel && (
+                    <span className="block mt-2 font-medium text-gray-900">
+                      {formatDate(pendingCancel)}
+                    </span>
+                  )}
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCancelConfirm(false);
+                      setPendingCancel(null);
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    onClick={handleCancelReservation}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                  >
+                    Evet, İptal Et
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Rezervasyonlarım</h1>
@@ -335,7 +462,7 @@ export default function RezervasyonlarimPage() {
                     <div className="flex-shrink-0">
                       {cancelable ? (
                         <button
-                          onClick={() => handleCancelReservation(reservation.date)}
+                          onClick={() => handleCancelClick(reservation.date)}
                           disabled={cancelling === reservation.date}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         >

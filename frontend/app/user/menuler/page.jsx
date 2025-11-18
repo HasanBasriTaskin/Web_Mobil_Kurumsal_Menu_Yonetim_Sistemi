@@ -29,8 +29,13 @@ export default function MenulerPage() {
       // const dates = response.data.data.map(r => r.date);
       // setReservations(dates);
 
-      // Mock data
-      setReservations([]);
+      // Mock data - localStorage'dan yükle
+      const savedReservations = localStorage.getItem('user_reservations');
+      if (savedReservations) {
+        setReservations(JSON.parse(savedReservations));
+      } else {
+        setReservations([]);
+      }
     } catch (err) {
       console.error('Rezervasyonlar yüklenemedi:', err);
     }
@@ -127,6 +132,13 @@ export default function MenulerPage() {
     return menuDate > today;
   };
 
+  // Rezervasyon yapılabilir mi kontrolü
+  // Bugün için rezervasyon önceki günün sonuna kadar yapılmalı (bugün 00:00'dan sonra yapılamaz)
+  const canMakeReservation = (dateStr) => {
+    // Gelecek tarihler için rezervasyon yapılabilir
+    return isFutureDate(dateStr);
+  };
+
   // İptal edilebilir mi kontrol et (bugün için belirli saate kadar)
   // Öğlen yemeği 11:30 - 14:00 arası, iptal için son saat: 10:30 (11:30'dan 1 saat önce)
   const canCancel = (dateStr) => {
@@ -169,14 +181,26 @@ export default function MenulerPage() {
         // await apiClient.delete(`/reservations/${date}`);
         
         // Mock - iptal et
-        setReservations(prev => prev.filter(d => d !== date));
+        setReservations(prev => {
+          const updated = prev.filter(d => d !== date);
+          localStorage.setItem('user_reservations', JSON.stringify(updated));
+          // Custom event dispatch (aynı sayfa içi güncellemeler için)
+          window.dispatchEvent(new Event('reservationUpdated'));
+          return updated;
+        });
         setReserving('');
       } else {
         // API çağrısı
         // await apiClient.post('/reservations', { date });
         
         // Mock - rezervasyon yap
-        setReservations(prev => [...prev, date]);
+        setReservations(prev => {
+          const updated = [...prev, date];
+          localStorage.setItem('user_reservations', JSON.stringify(updated));
+          // Custom event dispatch (aynı sayfa içi güncellemeler için)
+          window.dispatchEvent(new Event('reservationUpdated'));
+          return updated;
+        });
         setReserving('');
       }
     } catch (err) {
@@ -390,8 +414,8 @@ export default function MenulerPage() {
                   </div>
                 </div>
 
-                {/* Rezervasyon Butonu */}
-                {isFutureDate(menu.date) && (() => {
+                {/* Rezervasyon Butonu - Sadece haftalık görünümde */}
+                {viewMode === 'week' && canMakeReservation(menu.date) && (() => {
                   const isReserved = reservations.includes(menu.date);
                   const isReserving = reserving === menu.date;
                   const cancelable = isReserved ? canCancel(menu.date) : true;
@@ -489,8 +513,8 @@ export default function MenulerPage() {
                         </div>
                       </div>
 
-                      {/* Sağ Taraf - Rezervasyon Butonu */}
-                      {isFutureDate(menu.date) && (
+                      {/* Sağ Taraf - Rezervasyon Butonu - Sadece haftalık görünümde */}
+                      {viewMode === 'week' && canMakeReservation(menu.date) && (
                         <div className="flex-shrink-0">
                           {(() => {
                             const handleReservation = async () => {
@@ -642,8 +666,8 @@ export default function MenulerPage() {
                         </div>
                       </div>
 
-                      {/* Rezervasyon Butonu */}
-                      {isFutureDate(menu.date) && (
+                      {/* Rezervasyon Butonu - Sadece haftalık görünümde */}
+                      {viewMode === 'week' && canMakeReservation(menu.date) && (
                         <div className="pt-4 border-t border-gray-200">
                           {(() => {
                             const handleReservation = async () => {

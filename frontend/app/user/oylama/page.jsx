@@ -84,31 +84,35 @@ export default function OylamaPage() {
       //   optionId: optionId
       // });
 
-      // Mock - oylama yap
+      // Mock - oylama yap (çoklu seçim: birden fazla yemeğe oy verilebilir)
       setActiveVotings(prev => 
         prev.map(voting => {
           if (voting.id === votingId) {
             const newOptions = voting.options.map(opt => {
               if (opt.id === optionId) {
-                return {
-                  ...opt,
-                  votes: opt.votes + 1,
-                  userVoted: true
-                };
-              } else if (opt.userVoted) {
-                return {
-                  ...opt,
-                  votes: Math.max(0, opt.votes - 1),
-                  userVoted: false
-                };
+                // Aynı seçeneğe tıklandığında: eğer zaten oy verilmişse geri al, yoksa oy ver
+                if (opt.userVoted) {
+                  return {
+                    ...opt,
+                    votes: Math.max(0, opt.votes - 1),
+                    userVoted: false
+                  };
+                } else {
+                  return {
+                    ...opt,
+                    votes: opt.votes + 1,
+                    userVoted: true
+                  };
+                }
               }
+              // Diğer seçenekler değişmez (çoklu seçim)
               return opt;
             });
             return {
               ...voting,
               options: newOptions,
               totalVotes: newOptions.reduce((sum, opt) => sum + opt.votes, 0),
-              userCanVote: false
+              userCanVote: true // Kullanıcı istediği zaman oyunu değiştirebilir
             };
           }
           return voting;
@@ -116,9 +120,8 @@ export default function OylamaPage() {
       );
 
       setVoting('');
-      alert('Oyunuz başarıyla kaydedildi!');
     } catch (err) {
-      alert('Oylama yapılırken bir hata oluştu.');
+      console.error('Oylama yapılırken bir hata oluştu:', err);
       setVoting('');
     }
   };
@@ -154,7 +157,6 @@ export default function OylamaPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Oylama</h1>
-        <p className="text-gray-600">Gelecek haftanın menüsü için oylamaya katılın</p>
       </div>
 
       {error && (
@@ -188,24 +190,28 @@ export default function OylamaPage() {
                     </div>
                   </div>
 
-                  {/* Oylama Seçenekleri */}
+                  {/* Oylama Seçenekleri - Tüm yemekler gösterilir ama sadece oy verdiğiniz yemekler görünür */}
                   <div className="space-y-3 mb-4">
                     {votingItem.options.map((option) => {
-                      const percentage = calculatePercentage(option.votes, votingItem.totalVotes);
                       const isVotingThisOption = isVoting && voting.endsWith(option.id);
+                      
+                      // Sadece oy verilen yemekleri göster
+                      if (!option.userVoted) {
+                        return null;
+                      }
                       
                       return (
                         <div key={option.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 flex-1">
                               <button
                                 onClick={() => handleVote(votingItem.id, option.id)}
-                                disabled={!votingItem.userCanVote || isVoting}
+                                disabled={isVoting}
                                 className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                                   option.userVoted
                                     ? 'bg-blue-600 border-blue-600'
                                     : 'border-gray-300 hover:border-blue-500'
-                                } ${!votingItem.userCanVote || isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                } ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                               >
                                 {option.userVoted && (
                                   <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -214,41 +220,44 @@ export default function OylamaPage() {
                                 )}
                               </button>
                               <span className="font-medium text-gray-900">{option.name}</span>
-                              {option.userVoted && (
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                  Seçtiniz
-                                </span>
-                              )}
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                Seçtiniz
+                              </span>
                             </div>
-                            <div className="text-right">
-                              <span className="text-sm font-semibold text-gray-900">{option.votes} oy</span>
-                              <span className="text-xs text-gray-500 ml-2">({percentage}%)</span>
-                            </div>
-                          </div>
-                          
-                          {/* İlerleme Çubuğu */}
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full transition-all ${
-                                option.userVoted ? 'bg-blue-600' : 'bg-gray-400'
-                              }`}
-                              style={{ width: `${percentage}%` }}
-                            ></div>
                           </div>
                         </div>
                       );
                     })}
-                  </div>
-
-                  {/* Toplam Oy */}
-                  <div className="pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Toplam Oy:</span>
-                      <span className="text-sm font-semibold text-gray-900">{votingItem.totalVotes} kişi</span>
-                    </div>
-                    {!votingItem.userCanVote && (
-                      <p className="text-xs text-gray-500 mt-2">Oyunuzu zaten kullandınız.</p>
+                    {votingItem.options.filter(option => option.userVoted).length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">Henüz oy vermediniz.</p>
                     )}
+                  </div>
+                  
+                  {/* Yeni Oy Vermek İçin Tüm Yemekler (Sadece Oylama İçin) */}
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Yeni Oy Vermek İçin:</h4>
+                    <div className="space-y-2">
+                      {votingItem.options
+                        .filter(option => !option.userVoted) // Oy verilmeyen yemekleri göster
+                        .map((option) => {
+                          return (
+                            <div key={option.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => handleVote(votingItem.id, option.id)}
+                                  disabled={isVoting}
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors border-gray-300 hover:border-blue-500 ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                >
+                                </button>
+                                <span className="font-medium text-gray-900">{option.name}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {votingItem.options.filter(option => !option.userVoted).length === 0 && (
+                        <p className="text-sm text-gray-500 text-center py-2">Tüm seçeneklere oy verdiniz.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -286,52 +295,25 @@ export default function OylamaPage() {
                   </div>
                 </div>
 
-                {/* Sonuçlar */}
+                {/* Sonuçlar - Sadece oy verdiğiniz yemekler gösterilir */}
                 <div className="space-y-3">
                   {votingItem.options
-                    .sort((a, b) => b.votes - a.votes)
-                    .map((option, index) => {
-                      const percentage = calculatePercentage(option.votes, votingItem.totalVotes);
-                      const isWinner = index === 0;
-                      
+                    .filter(option => option.userVoted) // Sadece oy verilen yemekleri göster
+                    .map((option) => {
                       return (
-                        <div key={option.id} className={`border rounded-lg p-3 ${isWinner ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200'}`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              {isWinner && (
-                                <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              )}
-                              <span className="font-medium text-gray-900">{option.name}</span>
-                              {option.userVoted && (
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                  Seçtiniz
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-semibold text-gray-900">{option.votes} oy</span>
-                              <span className="text-xs text-gray-500 ml-2">({percentage}%)</span>
-                            </div>
-                          </div>
-                          
-                          {/* İlerleme Çubuğu */}
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full ${isWinner ? 'bg-yellow-500' : 'bg-gray-400'}`}
-                              style={{ width: `${percentage}%` }}
-                            ></div>
+                        <div key={option.id} className="border border-gray-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">{option.name}</span>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                              Seçtiniz
+                            </span>
                           </div>
                         </div>
                       );
                     })}
-                </div>
-
-                {/* Toplam Oy */}
-                <div className="pt-4 mt-4 border-t border-gray-200">
-                  <span className="text-sm text-gray-600">Toplam Oy: </span>
-                  <span className="text-sm font-semibold text-gray-900">{votingItem.totalVotes} kişi</span>
+                  {votingItem.options.filter(option => option.userVoted).length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">Bu oylamada oy vermediniz.</p>
+                  )}
                 </div>
               </div>
             ))}
