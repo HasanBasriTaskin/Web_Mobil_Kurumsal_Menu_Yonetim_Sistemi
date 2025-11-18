@@ -1,6 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 
 // Örnek yemek verileri (gerçek uygulamada API'den gelecek)
 const mealData = [
@@ -41,6 +54,26 @@ export default function RaporlamaPage() {
   // Genel istatistikler
   const overallAverage = mealData.reduce((sum, meal) => sum + meal.averageRating, 0) / mealData.length;
   const totalRatings = mealData.reduce((sum, meal) => sum + meal.totalRatings, 0);
+
+  // Grafik verileri
+  const chartData = sortedMeals.map(meal => ({
+    name: meal.name.length > 15 ? meal.name.substring(0, 15) + '...' : meal.name,
+    fullName: meal.name,
+    puan: meal.averageRating,
+    degerlendirme: meal.totalRatings
+  }));
+
+  // Kategori dağılımı
+  const categoryData = categories.filter(cat => cat !== 'all').map(cat => {
+    const mealsInCategory = mealData.filter(meal => meal.category === cat);
+    return {
+      name: cat,
+      value: mealsInCategory.length,
+      totalRatings: mealsInCategory.reduce((sum, meal) => sum + meal.totalRatings, 0)
+    };
+  });
+
+  const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'];
 
   return (
     <div className="p-8">
@@ -101,6 +134,57 @@ export default function RaporlamaPage() {
               <option value="popularity">Popülerliğe Göre</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      {/* Grafikler */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Yemek Puanları Bar Chart */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Yemek Puanları</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData.slice(0, 8)}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="name" 
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                fontSize={12}
+              />
+              <YAxis domain={[0, 5]} />
+              <Tooltip 
+                formatter={(value) => value.toFixed(1)}
+                labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
+              />
+              <Legend />
+              <Bar dataKey="puan" fill="#10b981" name="Puan (5 üzerinden)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Kategori Dağılımı Pie Chart */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Kategori Dağılımı</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={categoryData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {categoryData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

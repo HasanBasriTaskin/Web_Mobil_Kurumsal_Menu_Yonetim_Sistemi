@@ -50,7 +50,7 @@ const navigation = [
     )
   },
   { 
-    name: 'Oylama Yönetimi', 
+    name: 'Oylama', 
     href: '/admin/oylama-yonetimi',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,12 +94,12 @@ export default function AdminLayout({ children }) {
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-sm">
-                AU
+                AD
               </div>
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">Admin User</p>
+              <p className="text-sm font-medium text-gray-900 truncate">Administrator</p>
               <p className="text-xs text-gray-500 truncate">admin@company.com</p>
             </div>
           </div>
@@ -155,8 +155,25 @@ export default function AdminLayout({ children }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {children}
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header Bar */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <div className="flex-1">
+            {/* Sayfa başlığı buraya eklenebilir */}
+          </div>
+          
+          {/* Profile Icon */}
+          <Link href="/admin/profil" className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors cursor-pointer">
+            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </Link>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
       </main>
     </div>
   );
