@@ -12,3 +12,4 @@ namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Auth
         public string NewPassword { get; set; }
     }
 }
+
