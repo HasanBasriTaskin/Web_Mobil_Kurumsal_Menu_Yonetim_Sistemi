@@ -16,6 +16,17 @@ namespace CorporateMenuManagementSystem.API.Controllers
             _authService = authService;
         }
 
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
+        {
+            var result = await _authService.RegisterAsync(registerDto);
+            if (result.IsSuccessful)
+            {
+                return StatusCode(201, result);
+            }
+            return StatusCode(result.StatusCode, result);
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {

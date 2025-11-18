@@ -40,7 +40,7 @@ export default function AdminPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">Aktif Menüler</p>
+          <p className="text-sm font-medium text-gray-600 mb-2">Aktif Menüler</p>
               <p className="text-4xl font-bold text-gray-900">{stats.activeMenus}</p>
             </div>
             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -48,14 +48,14 @@ export default function AdminPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-          </div>
+        </div>
         </div>
 
         {/* Bekleyen Yorumlar */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">Bekleyen Yorumlar</p>
+          <p className="text-sm font-medium text-gray-600 mb-2">Bekleyen Yorumlar</p>
               <p className="text-4xl font-bold text-gray-900">{stats.pendingComments}</p>
             </div>
             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -64,7 +64,7 @@ export default function AdminPage() {
               </svg>
             </div>
           </div>
-        </div>
+      </div>
 
         {/* Aktif Oylama */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -135,7 +135,7 @@ export default function AdminPage() {
                 <p className="text-xs text-gray-500">Yeni oylama başlat</p>
               </div>
             </Link>
-          </div>
+            </div>
         </div>
 
         {/* Son Aktiviteler */}
@@ -144,7 +144,7 @@ export default function AdminPage() {
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-gray-500 text-center mb-2">Henüz aktivite yok</p>
             <p className="text-sm text-gray-400 text-center">Yeni işlemler burada görünecek</p>
-          </div>
+            </div>
         </div>
       </div>
     </div>

@@ -172,7 +172,7 @@ export default function AdminLayout({ children }) {
 
         {/* Content Area */}
         <div className="flex-1 overflow-auto">
-          {children}
+        {children}
         </div>
       </main>
     </div>

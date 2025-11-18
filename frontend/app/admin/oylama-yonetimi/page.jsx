@@ -129,9 +129,7 @@ export default function OylamaYonetimiPage() {
   };
 
   const handleDeleteVoting = (votingId) => {
-    if (confirm('Bu anketi silmek istediğinizden emin misiniz?')) {
-      setVotings(votings.filter(v => v.id !== votingId));
-    }
+    setVotings(votings.filter(v => v.id !== votingId));
   };
 
   // Seçilebilir yemekler (zaten aday olmayanlar)

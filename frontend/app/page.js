@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { authAPI } from '@/services/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,26 +21,22 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Basit authentication kontrolü (gerçek uygulamada API'den gelecek)
-  const checkUserRole = (email, password) => {
-    const emailLower = email.toLowerCase().trim();
-    
-    // Admin kontrolü - örnek admin email'leri (önce admin kontrolü yapılmalı)
-    const adminEmails = ['admin@company.com', 'admin@cafeteria.com'];
-    
-    if (adminEmails.includes(emailLower)) {
-      if (password === 'admin123') {
-        return 'admin';
-      }
-      return null; // Admin email ama yanlış şifre
+  // JWT token'dan kullanıcı bilgilerini çıkar
+  const decodeToken = (token) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('Token decode error:', error);
+      return null;
     }
-    
-    // User kontrolü - diğer tüm email'ler user olarak kabul edilir
-    if (password === 'user123' || (password.length >= 6 && password !== 'admin123')) {
-      return 'user';
-    }
-    
-    return null;
   };
 
   const handleLogin = async (e) => {
@@ -54,26 +51,72 @@ export default function LoginPage() {
       return;
     }
 
-    // Kısa bir delay (gerçek API çağrısı simülasyonu)
-    setTimeout(() => {
-      const role = checkUserRole(email, password);
+    try {
+      const response = await authAPI.login(email, password);
       
-      if (role) {
-        // Token ve kullanıcı bilgilerini kaydet
-        localStorage.setItem('token', 'mock-token-' + Date.now());
-        localStorage.setItem('user', JSON.stringify({ email, role }));
+      if (response.isSuccessful && response.data) {
+        // Token'ı al
+        const token = response.data.accessToken || response.data.token;
         
-        // Role göre yönlendir
-        if (role === 'admin') {
-          window.location.href = '/admin';
+        if (token) {
+          // Token'ı kaydet
+          localStorage.setItem('token', token);
+          
+          // Token'dan kullanıcı bilgilerini çıkar
+          const decodedToken = decodeToken(token);
+          
+          if (decodedToken) {
+            // JWT token'dan email ve role bilgilerini al
+            const userEmail = decodedToken.email || decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || email;
+            const userRole = decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decodedToken.role || 'User';
+            const userId = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || decodedToken.sub || decodedToken.userId;
+            
+            // Kullanıcı bilgilerini kaydet
+            localStorage.setItem('user', JSON.stringify({
+              email: userEmail,
+              role: userRole,
+              id: userId,
+              username: decodedToken.sub || userEmail.split('@')[0],
+            }));
+            
+            // Role göre yönlendir
+            if (userRole === 'Admin' || userRole === 'admin') {
+              router.push('/admin');
+            } else {
+              router.push('/user');
+            }
+          } else {
+            // Token decode edilemezse, sadece email ile devam et
+            localStorage.setItem('user', JSON.stringify({
+              email: email,
+              role: 'User',
+            }));
+            router.push('/user');
+          }
         } else {
-          window.location.href = '/user';
+          setError('Giriş başarısız: Token alınamadı');
+          setIsLoading(false);
         }
       } else {
-        setError('Email veya şifre hatalı');
+        // Hata mesajını backend'den al
+        const errorMessage = response.errors?.[0]?.message || 
+                            response.errors?.[0]?.error || 
+                            response.message || 
+                            'Email veya şifre hatalı';
+        setError(errorMessage);
         setIsLoading(false);
       }
-    }, 500);
+    } catch (error) {
+      console.error('Login error:', error);
+      // Backend'den gelen hata mesajını göster
+      const errorMessage = error.response?.data?.errors?.[0]?.message ||
+                          error.response?.data?.message ||
+                          error.response?.data?.title ||
+                          error.message ||
+                          'Giriş yapılırken bir hata oluştu';
+      setError(errorMessage);
+      setIsLoading(false);
+    }
   };
 
   const handleRegister = async (e) => {
@@ -94,24 +137,88 @@ export default function LoginPage() {
       return;
     }
 
-    // Kısa bir delay (gerçek API çağrısı simülasyonu)
-    setTimeout(() => {
-      // Kayıt başarılı
-      setSuccess('Hesabınız başarıyla oluşturuldu! Giriş yapabilirsiniz.');
+    try {
+      const response = await authAPI.register(firstName, lastName, schoolEmail, registerPassword);
+      
+      if (response.isSuccessful) {
+        // Email'i kaydet (login formuna geçmeden önce)
+        const registeredEmail = schoolEmail;
+        
+        // Başarı mesajı göster
+        setSuccess('Hesabınız başarıyla oluşturuldu! Giriş yapabilirsiniz.');
+        setIsLoading(false);
+        
+        // Formu temizle
+        setFirstName('');
+        setLastName('');
+        setSchoolEmail('');
+        setRegisterPassword('');
+        
+        // 2 saniye sonra login formuna geç
+        setTimeout(() => {
+          setIsLogin(true);
+          setSuccess('');
+          // Email alanını doldur (kullanıcı kolaylığı için)
+          setEmail(registeredEmail);
+        }, 2000);
+      } else {
+        // Hata mesajını backend'den al
+        let errorMessage = 'Kayıt olurken bir hata oluştu';
+        
+        if (response.errors && Array.isArray(response.errors)) {
+          // ErrorDetail formatındaki hatalar
+          errorMessage = response.errors.map(err => err.message || err.error).filter(Boolean).join(', ') || errorMessage;
+        } else if (response.errors && typeof response.errors === 'object') {
+          // Validation hataları (field bazlı)
+          const validationErrors = [];
+          Object.keys(response.errors).forEach(key => {
+            if (Array.isArray(response.errors[key])) {
+              response.errors[key].forEach(msg => {
+                validationErrors.push(msg);
+              });
+            }
+          });
+          errorMessage = validationErrors.length > 0 ? validationErrors.join(', ') : errorMessage;
+        } else if (response.message) {
+          errorMessage = response.message;
+        }
+        
+        setError(errorMessage);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Register error:', error);
+      
+      // Backend validation hatalarını topla
+      if (error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const errorMessages = [];
+        
+        // Tüm validation hatalarını topla
+        Object.keys(validationErrors).forEach(key => {
+          if (Array.isArray(validationErrors[key])) {
+            validationErrors[key].forEach(msg => {
+              errorMessages.push(msg);
+            });
+          }
+        });
+        
+        if (errorMessages.length > 0) {
+          setError(errorMessages.join(', '));
+        } else {
+          setError('Kayıt olurken bir hata oluştu');
+        }
+      } else {
+        // Backend'den gelen hata mesajını göster
+        const errorMessage = error.response?.data?.errors?.[0]?.message ||
+                            error.response?.data?.message ||
+                            error.response?.data?.title ||
+                            error.message ||
+                            'Kayıt olurken bir hata oluştu';
+        setError(errorMessage);
+      }
       setIsLoading(false);
-      
-      // Formu temizle
-      setFirstName('');
-      setLastName('');
-      setSchoolEmail('');
-      setRegisterPassword('');
-      
-      // 2 saniye sonra login formuna geç
-      setTimeout(() => {
-        setIsLogin(true);
-        setSuccess('');
-      }, 2000);
-    }, 500);
+    }
   };
 
   const handleForgotPassword = async (e) => {
@@ -126,19 +233,28 @@ export default function LoginPage() {
       return;
     }
 
-    // Kısa bir delay (gerçek API çağrısı simülasyonu)
-    setTimeout(() => {
-      // Mail gönderme simülasyonu
-      setSuccess('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen e-posta kutunuzu kontrol edin.');
-      setIsLoading(false);
+    try {
+      const response = await authAPI.forgotPassword(forgotPasswordEmail);
       
-      // 3 saniye sonra formu kapat
-      setTimeout(() => {
-        setShowForgotPassword(false);
+      if (response.isSuccessful) {
+        setSuccess('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.');
         setForgotPasswordEmail('');
-        setSuccess('');
-      }, 3000);
-    }, 500);
+        setIsLoading(false);
+        
+        // 3 saniye sonra login formuna dön
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setSuccess('');
+        }, 3000);
+      } else {
+        setError(response.message || response.error || 'Bir hata oluştu');
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      setError(error.response?.data?.message || error.message || 'Bir hata oluştu');
+      setIsLoading(false);
+    }
   };
 
   return (
