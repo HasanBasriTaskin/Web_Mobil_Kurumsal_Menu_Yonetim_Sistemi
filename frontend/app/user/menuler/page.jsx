@@ -13,6 +13,8 @@ export default function MenulerPage() {
   const [error, setError] = useState('');
   const [reservations, setReservations] = useState([]);
   const [reserving, setReserving] = useState('');
+  const [showReservationConfirm, setShowReservationConfirm] = useState(false); // Onay kutusu için state
+  const [pendingReservation, setPendingReservation] = useState(null); // Bekleyen rezervasyon işlemi {date, action: 'create' | 'cancel'}
 
   useEffect(() => {
     loadMenus();
@@ -116,6 +118,15 @@ export default function MenulerPage() {
     return dateStr === today;
   };
 
+  // Gelecek gün mü kontrolü (bugün ve geçmiş günler için false)
+  const isFutureDate = (dateStr) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const menuDate = new Date(dateStr);
+    menuDate.setHours(0, 0, 0, 0);
+    return menuDate > today;
+  };
+
   // İptal edilebilir mi kontrol et (bugün için belirli saate kadar)
   // Öğlen yemeği 11:30 - 14:00 arası, iptal için son saat: 10:30 (11:30'dan 1 saat önce)
   const canCancel = (dateStr) => {
@@ -130,6 +141,50 @@ export default function MenulerPage() {
     cancelDeadline.setHours(10, 30, 0, 0); // Sabah 10:30 (yemek 11:30'da başlıyor)
     
     return now < cancelDeadline;
+  };
+
+  // Rezervasyon onayını göster
+  const handleReservationClick = (date, action) => {
+    setPendingReservation({ date, action });
+    setShowReservationConfirm(true);
+  };
+
+  // Rezervasyon işlemini onayla ve yap
+  const handleConfirmReservation = async () => {
+    if (!pendingReservation) return;
+
+    const { date, action } = pendingReservation;
+    setShowReservationConfirm(false);
+    setReserving(date);
+
+    try {
+      if (action === 'cancel') {
+        // Önce saat kontrolü yap
+        if (!canCancel(date)) {
+          setReserving('');
+          return;
+        }
+        
+        // API çağrısı
+        // await apiClient.delete(`/reservations/${date}`);
+        
+        // Mock - iptal et
+        setReservations(prev => prev.filter(d => d !== date));
+        setReserving('');
+      } else {
+        // API çağrısı
+        // await apiClient.post('/reservations', { date });
+        
+        // Mock - rezervasyon yap
+        setReservations(prev => [...prev, date]);
+        setReserving('');
+      }
+    } catch (err) {
+      console.error('Rezervasyon işlemi sırasında bir hata oluştu:', err);
+      setReserving('');
+    }
+    
+    setPendingReservation(null);
   };
 
   const weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
@@ -165,7 +220,54 @@ export default function MenulerPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-8 relative">
+      {/* Onay Mesajı Modal */}
+      {showReservationConfirm && pendingReservation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <div className="mb-4 text-yellow-600">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {pendingReservation.action === 'cancel' ? 'Rezervasyonu İptal Et' : 'Rezervasyon Yap'}
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                {pendingReservation.action === 'cancel' 
+                  ? `Bu rezervasyonu iptal etmek istediğinize emin misiniz?`
+                  : `Bu tarih için rezervasyon yapmak istediğinize emin misiniz?`}
+              </p>
+              <p className="text-xs text-gray-500 mb-6">
+                {formatDate(pendingReservation.date)}
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    setShowReservationConfirm(false);
+                    setPendingReservation(null);
+                  }}
+                  className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Hayır
+                </button>
+                <button
+                  onClick={handleConfirmReservation}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                    pendingReservation.action === 'cancel'
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {pendingReservation.action === 'cancel' ? 'Evet, İptal Et' : 'Evet, Rezervasyon Yap'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Haftalık Menü</h1>
@@ -289,54 +391,20 @@ export default function MenulerPage() {
                 </div>
 
                 {/* Rezervasyon Butonu */}
-                {!isTodayMenu && (() => {
+                {isFutureDate(menu.date) && (() => {
                   const isReserved = reservations.includes(menu.date);
                   const isReserving = reserving === menu.date;
                   const cancelable = isReserved ? canCancel(menu.date) : true;
                   
-                  const handleReservation = async () => {
+                  const handleReservation = () => {
                     if (isReserved) {
                       // Önce saat kontrolü yap
                       if (!canCancel(menu.date)) {
-                        alert('Üzgünüz, bu rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
                         return;
                       }
-
-                      if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
-                        return;
-                      }
-
-                      // Rezervasyon iptal et
-                      try {
-                        setReserving(menu.date);
-                        // API çağrısı
-                        // await apiClient.delete(`/reservations/${menu.date}`);
-                        
-                        // Mock - iptal et
-                        setReservations(prev => prev.filter(d => d !== menu.date));
-                        setReserving('');
-                        alert('Rezervasyonunuz iptal edildi.');
-                      } catch (err) {
-                        // Backend'den hata gelirse (örn: saat geçmişse) göster
-                        const errorMessage = err.response?.data?.message || 'Rezervasyon iptal edilirken bir hata oluştu.';
-                        alert(errorMessage);
-                        setReserving('');
-                      }
+                      handleReservationClick(menu.date, 'cancel');
                     } else {
-                      // Rezervasyon yap
-                      try {
-                        setReserving(menu.date);
-                        // API çağrısı
-                        // await apiClient.post('/reservations', { date: menu.date });
-                        
-                        // Mock - rezervasyon yap
-                        setReservations(prev => [...prev, menu.date]);
-                        setReserving('');
-                        alert('Rezervasyonunuz başarıyla oluşturuldu!');
-                      } catch (err) {
-                        alert('Rezervasyon yapılırken bir hata oluştu.');
-                        setReserving('');
-                      }
+                      handleReservationClick(menu.date, 'create');
                     }
                   };
 
@@ -422,25 +490,20 @@ export default function MenulerPage() {
                       </div>
 
                       {/* Sağ Taraf - Rezervasyon Butonu */}
-                      {!isTodayMenu && (
+                      {isFutureDate(menu.date) && (
                         <div className="flex-shrink-0">
                           {(() => {
                             const handleReservation = async () => {
                               if (isReserved) {
                                 if (!canCancel(menu.date)) {
-                                  alert('Üzgünüz, bu rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
-                                  return;
-                                }
-                                if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
                                   return;
                                 }
                                 try {
                                   setReserving(menu.date);
                                   setReservations(prev => prev.filter(d => d !== menu.date));
                                   setReserving('');
-                                  alert('Rezervasyonunuz iptal edildi.');
                                 } catch (err) {
-                                  alert('Rezervasyon iptal edilirken bir hata oluştu.');
+                                  console.error('Rezervasyon iptal edilirken bir hata oluştu:', err);
                                   setReserving('');
                                 }
                               } else {
@@ -448,9 +511,8 @@ export default function MenulerPage() {
                                   setReserving(menu.date);
                                   setReservations(prev => [...prev, menu.date]);
                                   setReserving('');
-                                  alert('Rezervasyonunuz başarıyla oluşturuldu!');
                                 } catch (err) {
-                                  alert('Rezervasyon yapılırken bir hata oluştu.');
+                                  console.error('Rezervasyon yapılırken bir hata oluştu:', err);
                                   setReserving('');
                                 }
                               }
@@ -581,25 +643,20 @@ export default function MenulerPage() {
                       </div>
 
                       {/* Rezervasyon Butonu */}
-                      {!isTodayMenu && (
+                      {isFutureDate(menu.date) && (
                         <div className="pt-4 border-t border-gray-200">
                           {(() => {
                             const handleReservation = async () => {
                               if (isReserved) {
                                 if (!canCancel(menu.date)) {
-                                  alert('Üzgünüz, bu rezervasyonu iptal etmek için son saat geçti. İptal edilemez.');
-                                  return;
-                                }
-                                if (!confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
                                   return;
                                 }
                                 try {
                                   setReserving(menu.date);
                                   setReservations(prev => prev.filter(d => d !== menu.date));
                                   setReserving('');
-                                  alert('Rezervasyonunuz iptal edildi.');
                                 } catch (err) {
-                                  alert('Rezervasyon iptal edilirken bir hata oluştu.');
+                                  console.error('Rezervasyon iptal edilirken bir hata oluştu:', err);
                                   setReserving('');
                                 }
                               } else {
@@ -607,9 +664,8 @@ export default function MenulerPage() {
                                   setReserving(menu.date);
                                   setReservations(prev => [...prev, menu.date]);
                                   setReserving('');
-                                  alert('Rezervasyonunuz başarıyla oluşturuldu!');
                                 } catch (err) {
-                                  alert('Rezervasyon yapılırken bir hata oluştu.');
+                                  console.error('Rezervasyon yapılırken bir hata oluştu:', err);
                                   setReserving('');
                                 }
                               }
