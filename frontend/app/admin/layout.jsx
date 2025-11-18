@@ -73,9 +73,8 @@ export default function AdminLayout({ children }) {
       document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     }
-    // Ana sayfaya yönlendir ve sayfayı yenile
+    // Login sayfasına yönlendir
     router.push('/');
-    router.refresh();
   };
 
   return (
