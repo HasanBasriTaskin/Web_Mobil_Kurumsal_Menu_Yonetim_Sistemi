@@ -1,13 +1,14 @@
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
-    public interface IFeedbackService : IGenericService<Feedback>
+    public interface IFeedbackService
     {
-        Task<List<Feedback>> GetAllFeedbacksWithRelationsAsync();
-        Task<Response<Feedback>> CreateFeedbackAsync(Feedback feedback);
+        Task<Response<FeedbackDto>> SubmitFeedbackAsync(CreateFeedbackDto createFeedbackDto, string userId);
+        Task<Response<FeedbackSummaryDto>> GetDailyFeedbackAsync(int menuId);
+        Task<Response<List<AdminFeedbackDto>>> GetAllFeedbackAsync();
     }
 }

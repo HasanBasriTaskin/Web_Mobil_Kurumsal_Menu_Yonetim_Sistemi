@@ -2,6 +2,7 @@ using AutoMapper;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Menu;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
 
 namespace CorporateMenuManagementSystem.API.Mappings
 {
@@ -21,6 +22,10 @@ namespace CorporateMenuManagementSystem.API.Mappings
                 .ForMember(dest => dest.UserLastName, opt => opt.MapFrom(src => src.AppUser.LastName))
                 .ForMember(dest => dest.MenuDate, opt => opt.MapFrom(src => src.Menu.MenuDate))
                 .ForMember(dest => dest.MainCourse, opt => opt.MapFrom(src => src.Menu.MainCourse));
+        
+            CreateMap<Feedback, FeedbackDto>().ReverseMap();
+            CreateMap<CreateFeedbackDto, Feedback>();
+            CreateMap<Feedback, AdminFeedbackDto>();
         }
     }
 }

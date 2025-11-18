@@ -8,7 +8,7 @@ namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Auth
         [EmailAddress(ErrorMessage = "Geçerli bir e-posta adresi giriniz.")]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "Şifre alanı zorunludur.")]
+        [Required(ErrorMessage = "Şifre zorunludur.")]
         public string Password { get; set; }
     }
 }

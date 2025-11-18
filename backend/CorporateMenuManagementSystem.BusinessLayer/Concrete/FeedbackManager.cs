@@ -1,5 +1,7 @@
+using AutoMapper;
 using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using System;
@@ -9,46 +11,78 @@ using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {
-    public class FeedbackManager : GenericManager<Feedback>, IFeedbackService
+    public class FeedbackManager : IFeedbackService
     {
         private readonly IFeedbackRepository _feedbackRepository;
         private readonly IMenuRepository _menuRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public FeedbackManager(IFeedbackRepository feedbackRepository, IMenuRepository menuRepository) : base(feedbackRepository)
+        public FeedbackManager(IFeedbackRepository feedbackRepository, IMenuRepository menuRepository, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _feedbackRepository = feedbackRepository;
             _menuRepository = menuRepository;
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
-        public async Task<Response<Feedback>> CreateFeedbackAsync(Feedback feedback)
+        // --- IFeedbackService Arayüzünün Doğru Implementasyonu ---
+
+        public async Task<Response<FeedbackDto>> SubmitFeedbackAsync(CreateFeedbackDto createFeedbackDto, string userId)
         {
-            var menu = await _menuRepository.GetByIdAsync(feedback.MenuId);
-            // Yorum yapılmak istenen menü var mı?
-            if (menu == null)
+            var existingFeedback = await _feedbackRepository
+                .TGetAsync(f => f.MenuId == createFeedbackDto.MenuId && f.AppUserId == userId);
+
+            if (existingFeedback != null)
             {
-                 return Response<Feedback>.Fail(new ErrorDetail("MenuNotFound", "Yorum yapılmak istenen menü bulunamadı."), 404);
+                return Response<FeedbackDto>.Fail(new ErrorDetail("Conflict", "Bu menü için zaten bir geri bildirimde bulundunuz."), 409);
             }
 
-            // Sadece bugünün menüsüne yorum yapılabilir.
-            if (menu.MenuDate.Date != DateTime.Now.Date)
-            {
-                return Response<Feedback>.Fail(new ErrorDetail("DateError", "Sadece bugünün menüsü için yorum yapabilirsiniz."), 400);
-            }
+            var newFeedback = _mapper.Map<Feedback>(createFeedbackDto);
+            newFeedback.AppUserId = userId;
+            newFeedback.CreatedDate = DateTime.UtcNow;
 
-            // Aynı menüye daha önce yorum yapılmış mı?
-            var existingFeedback = await _feedbackRepository.GetListByFilterAsync(f => f.AppUserId == feedback.AppUserId && f.MenuId == feedback.MenuId);
-            if (existingFeedback.Any())
-            {
-                return Response<Feedback>.Fail(new ErrorDetail("DuplicateFeedback", "Bu menü için zaten bir geri bildirimde bulundunuz."), 409);
-            }
+            await _feedbackRepository.TAddAsync(newFeedback);
+            await _unitOfWork.CommitAsync();
 
-            await _feedbackRepository.AddAsync(feedback);
-            return Response<Feedback>.Success(feedback, 201);
+            var feedbackDto = _mapper.Map<FeedbackDto>(newFeedback);
+            return Response<FeedbackDto>.Success(feedbackDto, 201);
         }
 
-        public async Task<List<Feedback>> GetAllFeedbacksWithRelationsAsync()
+        public async Task<Response<FeedbackSummaryDto>> GetDailyFeedbackAsync(int menuId)
         {
-            return await _feedbackRepository.GetAllFeedbacksWithRelationsAsync();
+            var menuExists = await _menuRepository.TGetByIdAsync(menuId) != null;
+            if (!menuExists)
+            {
+                return Response<FeedbackSummaryDto>.Fail(new ErrorDetail("Not Found", "Menü bulunamadı."), 404);
+            }
+
+            var feedbacks = await _feedbackRepository.TGetAllAsync(f => f.MenuId == menuId);
+
+            if (!feedbacks.Any())
+            {
+                return Response<FeedbackSummaryDto>.Success(new FeedbackSummaryDto
+                {
+                    MenuId = menuId, AverageRating = 0, TotalReviews = 0, Comments = new List<string>()
+                }, 200);
+            }
+
+            var summary = new FeedbackSummaryDto
+            {
+                MenuId = menuId,
+                AverageRating = feedbacks.Average(f => f.Rating),
+                TotalReviews = feedbacks.Count,
+                Comments = feedbacks.Select(f => f.Comment).ToList()
+            };
+
+            return Response<FeedbackSummaryDto>.Success(summary, 200);
+        }
+        
+        public async Task<Response<List<AdminFeedbackDto>>> GetAllFeedbackAsync()
+        {
+            var feedbacks = await _feedbackRepository.GetAllWithRelationsAsync();
+            var adminFeedbackDtos = _mapper.Map<List<AdminFeedbackDto>>(feedbacks);
+            return Response<List<AdminFeedbackDto>>.Success(adminFeedbackDtos, 200);
         }
     }
 }
