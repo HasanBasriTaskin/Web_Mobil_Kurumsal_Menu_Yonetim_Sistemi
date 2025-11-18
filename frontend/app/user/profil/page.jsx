@@ -15,6 +15,15 @@ export default function ProfilPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  // Şifre değiştirme için state
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   // Diyet tercihleri ve alerjen seçenekleri
   const dietaryOptions = [
@@ -152,6 +161,40 @@ export default function ProfilPage() {
     }
   };
 
+  // Şifre değiştir
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError('');
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Şifreler eşleşmiyor.');
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+
+      // API çağrısı yapılacak
+      // await apiClient.put('/profile/change-password', {
+      //   oldPassword: passwordData.oldPassword,
+      //   newPassword: passwordData.newPassword
+      // });
+
+      // Mock - başarılı
+      setTimeout(() => {
+        setPasswordData({
+          oldPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setChangingPassword(false);
+      }, 500);
+    } catch (err) {
+      setPasswordError('Şifre değiştirilemedi.');
+      setChangingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-screen">
@@ -197,6 +240,71 @@ export default function ProfilPage() {
         </div>
       )}
 
+      {/* Şifre Değiştirme Formu */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Şifre Değiştir</h2>
+        
+        {passwordError && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-red-800 text-sm">{passwordError}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleChangePassword} className="space-y-4">
+          <div>
+            <label htmlFor="oldPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Eski Şifre
+            </label>
+            <input
+              id="oldPassword"
+              type="password"
+              value={passwordData.oldPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, oldPassword: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Yeni Şifre
+            </label>
+            <input
+              id="newPassword"
+              type="password"
+              value={passwordData.newPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Yeni Şifre Tekrar
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={passwordData.confirmPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={changingPassword}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {changingPassword ? 'Değiştiriliyor...' : 'Şifreyi Değiştir'}
+            </button>
+          </div>
+        </form>
+      </div>
+
       {/* Profil Formu */}
       <form onSubmit={handleSave} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         {/* Temel Bilgiler */}
@@ -228,7 +336,6 @@ export default function ProfilPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none cursor-not-allowed text-gray-900"
                 readOnly
               />
-              <p className="mt-1 text-xs text-gray-500">E-posta adresi değiştirilemez.</p>
             </div>
 
             <div>
