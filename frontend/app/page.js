@@ -80,10 +80,10 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold text-white">CafeteriaCo</h1>
           </div>
           <h2 className="text-4xl font-bold text-white mb-6">
-            Your daily culinary journey starts here.
+            Günlük mutfak yolculuğunuz burada başlar.
           </h2>
           <p className="text-gray-300 text-lg">
-            Log in to view menus, place orders, and manage your account.
+            Menüleri görüntülemek, sipariş vermek ve hesabınızı yönetmek için giriş yapın.
           </p>
         </div>
       </div>
@@ -92,8 +92,8 @@ export default function LoginPage() {
       <div className="w-full lg:w-1/2 bg-green-50 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-3xl font-bold text-green-600 mb-2">Welcome Back</h2>
-            <p className="text-green-600 mb-8">Sign in with your corporate account</p>
+            <h2 className="text-3xl font-bold text-green-600 mb-2">Tekrar Hoş Geldiniz</h2>
+            <p className="text-green-600 mb-8">Kurumsal hesabınızla giriş yapın</p>
 
             {/* Google ve Microsoft Butonları */}
             <div className="space-y-3 mb-6">
@@ -107,7 +107,7 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span className="text-gray-700 font-medium">Continue with Google</span>
+                <span className="text-gray-700 font-medium">Google ile Devam Et</span>
               </button>
               <button
                 type="button"
@@ -116,7 +116,7 @@ export default function LoginPage() {
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#00A4EF">
                   <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
                 </svg>
-                <span className="text-gray-700 font-medium">Continue with Microsoft</span>
+                <span className="text-gray-700 font-medium">Microsoft ile Devam Et</span>
               </button>
             </div>
 
@@ -125,7 +125,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-green-600">or sign in with email</span>
+                <span className="px-2 bg-white text-green-600">veya e-posta ile giriş yapın</span>
               </div>
             </div>
 
@@ -140,14 +140,14 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
+                  E-posta Adresi
                 </label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="E-posta adresinizi girin"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   required
                 />
@@ -156,10 +156,10 @@ export default function LoginPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Password
+                    Şifre
                   </label>
                   <a href="#" className="text-sm text-green-600 hover:text-green-700">
-                    Forgot Password?
+                    Şifremi Unuttum?
                   </a>
                 </div>
                 <div className="relative">
@@ -168,7 +168,7 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder="Şifrenizi girin"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none pr-12"
                     required
                   />
@@ -196,13 +196,13 @@ export default function LoginPage() {
                 disabled={isLoading}
                 className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
               </button>
             </form>
 
             <div className="mt-6 text-center">
               <a href="#" className="text-sm text-green-600 hover:text-green-700">
-                Need Help?
+                Yardıma mı ihtiyacınız var?
               </a>
             </div>
           </div>
