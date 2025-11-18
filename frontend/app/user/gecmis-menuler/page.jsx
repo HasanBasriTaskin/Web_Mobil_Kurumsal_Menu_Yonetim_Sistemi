@@ -8,10 +8,18 @@ export default function GecmisMenulerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedWeek, setSelectedWeek] = useState(null); // Seçili hafta (1, 2, 3, 4)
 
   useEffect(() => {
     loadPastMenus();
   }, [selectedMonth]);
+
+  // Menüler yüklendikten sonra ilk haftayı varsayılan olarak seç
+  useEffect(() => {
+    if (pastMenus.length > 0 && selectedWeek === null) {
+      setSelectedWeek(1);
+    }
+  }, [pastMenus]);
 
   // Geçmiş menüleri yükle
   const loadPastMenus = async () => {
@@ -111,7 +119,6 @@ export default function GecmisMenulerPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Geçmiş Menüler</h1>
-        <p className="text-gray-600">Geçmiş haftaların menülerini görüntüleyebilirsiniz</p>
       </div>
 
       {error && (
@@ -120,10 +127,37 @@ export default function GecmisMenulerPage() {
         </div>
       )}
 
+      {/* Hafta Butonları */}
+      {pastMenus.length > 0 && (
+        <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex gap-3 flex-wrap">
+            {pastMenus.map((weekMenu, index) => {
+              const weekNumber = index + 1;
+              const isSelected = selectedWeek === weekNumber;
+              return (
+                <button
+                  key={weekNumber}
+                  onClick={() => setSelectedWeek(weekNumber)}
+                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                    isSelected
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {weekMenu.week} {getWeekRange(weekMenu.weekStart)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Geçmiş Haftalar */}
       {pastMenus.length > 0 ? (
         <div className="space-y-6">
-          {pastMenus.map((weekMenu, weekIndex) => (
+          {pastMenus
+            .filter((weekMenu, index) => selectedWeek === index + 1)
+            .map((weekMenu, weekIndex) => (
             <div key={weekIndex} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="mb-4 pb-4 border-b border-gray-200">
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">{weekMenu.week}</h2>
