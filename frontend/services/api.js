@@ -182,10 +182,12 @@ export const authAPI = {
   },
 
   // POST /api/auth/reset-password - Şifre sıfırlama
-  resetPassword: async (token, newPassword) => {
+  resetPassword: async (email, token, newPassword, confirmNewPassword) => {
     const response = await apiClient.post('/auth/reset-password', {
+      email,
       token,
       newPassword,
+      confirmNewPassword,
     });
     return response.data;
   },

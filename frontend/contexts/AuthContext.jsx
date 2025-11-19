@@ -196,10 +196,10 @@ export function AuthProvider({ children }) {
   };
 
   // Reset password
-  const resetPassword = async (token, newPassword) => {
+  const resetPassword = async (email, token, newPassword, confirmNewPassword) => {
     try {
       setLoading(true);
-      const response = await authAPI.resetPassword(token, newPassword);
+      const response = await authAPI.resetPassword(email, token, newPassword, confirmNewPassword);
 
       if (response.success) {
         toast.success(
