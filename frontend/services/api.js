@@ -285,6 +285,15 @@ export const feedbackAPI = {
     return response.data;
   },
 
+  // PUT /api/feedback/{id} - Geri bildirimi güncelle
+  update: async (feedbackId, rating, comment = '') => {
+    const response = await apiClient.put(`/feedback/${feedbackId}`, {
+      rating,
+      comment,
+    });
+    return response.data;
+  },
+
   // GET /api/feedback/daily/{menuId} - Günlük geri bildirimler
   getDaily: async (menuId) => {
     const response = await apiClient.get(`/feedback/daily/${menuId}`);
