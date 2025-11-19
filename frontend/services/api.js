@@ -35,10 +35,70 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for error handling and format normalization
 apiClient.interceptors.response.use(
   (response) => {
-    // Başarılı response'ları olduğu gibi döndür
+    // Backend response formatını normalize et
+    // Backend: { isSuccessful, statusCode, data, errors }
+    // Frontend beklentisi: { success, data, message }
+    if (response.data && typeof response.data === 'object') {
+      const backendResponse = response.data;
+      
+      // Backend formatını frontend formatına dönüştür
+      const normalizedResponse = {
+        success: backendResponse.isSuccessful ?? backendResponse.success ?? true,
+        data: backendResponse.data,
+        message: backendResponse.message || '',
+        errors: backendResponse.errors || null,
+        statusCode: backendResponse.statusCode || response.status
+      };
+      
+      // Auth response için özel dönüşüm
+      if (normalizedResponse.data?.accessToken) {
+        // JWT token'ı decode et
+        const token = normalizedResponse.data.accessToken;
+        
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split('')
+              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          );
+          const decoded = JSON.parse(jsonPayload);
+          
+          // User bilgisini token'dan çıkar
+          const userEmail = decoded.email || decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || '';
+          const userRole = decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded.role || 'User';
+          const userId = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || decoded.sub || '';
+          const userName = decoded.sub || userEmail.split('@')[0];
+          
+          // Normalized format
+          normalizedResponse.data = {
+            token: token,
+            user: {
+              id: userId,
+              email: userEmail,
+              role: userRole,
+              userName: userName
+            }
+          };
+          
+          console.log('✅ Auth response normalized:', {
+            hasToken: !!token,
+            userEmail,
+            userRole
+          });
+        } catch (err) {
+          console.error('Token decode error:', err);
+        }
+      }
+      
+      response.data = normalizedResponse;
+    }
+    
     return response;
   },
   (error) => {
