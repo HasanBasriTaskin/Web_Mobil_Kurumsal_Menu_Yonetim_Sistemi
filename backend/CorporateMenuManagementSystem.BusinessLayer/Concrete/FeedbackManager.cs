@@ -93,7 +93,10 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             {
                 return Response<FeedbackSummaryDto>.Success(new FeedbackSummaryDto
                 {
-                    MenuId = menuId, AverageRating = 0, TotalReviews = 0, Comments = new List<string>()
+                    MenuId = menuId, 
+                    AverageRating = 0, 
+                    TotalReviews = 0, 
+                    Comments = new List<FeedbackCommentDto>()
                 }, 200);
             }
 
@@ -102,10 +105,34 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
                 MenuId = menuId,
                 AverageRating = feedbacks.Average(f => f.Star),
                 TotalReviews = feedbacks.Count(),
-                Comments = feedbacks.Select(f => f.Comment).ToList()
+                Comments = feedbacks.Select(f => new FeedbackCommentDto
+                {
+                    Rating = f.Star,
+                    Comment = f.Comment,
+                    Time = GetRelativeTime(f.CreatedDate)
+                }).ToList()
             };
 
             return Response<FeedbackSummaryDto>.Success(summary, 200);
+        }
+
+        // Relative time helper metodu
+        private string GetRelativeTime(DateTime createdDate)
+        {
+            var now = DateTime.UtcNow;
+            var diff = now - createdDate;
+
+            if (diff.TotalMinutes < 1)
+                return "Az önce";
+            if (diff.TotalMinutes < 60)
+                return $"{(int)diff.TotalMinutes} dakika önce";
+            if (diff.TotalHours < 24)
+                return $"{(int)diff.TotalHours} saat önce";
+            if (diff.TotalDays < 7)
+                return $"{(int)diff.TotalDays} gün önce";
+            
+            // 7 günden eski ise sadece saati göster
+            return createdDate.ToLocalTime().ToString("HH:mm");
         }
         
         public async Task<Response<FeedbackDto>> UpdateFeedbackAsync(int feedbackId, UpdateFeedbackDto updateFeedbackDto, string userId)

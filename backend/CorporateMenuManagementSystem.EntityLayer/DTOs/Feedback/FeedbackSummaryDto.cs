@@ -7,6 +7,6 @@ namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback
         public int MenuId { get; set; }
         public double AverageRating { get; set; }
         public int TotalReviews { get; set; }
-        public List<string> Comments { get; set; }
+        public List<FeedbackCommentDto> Comments { get; set; }
     }
 }
