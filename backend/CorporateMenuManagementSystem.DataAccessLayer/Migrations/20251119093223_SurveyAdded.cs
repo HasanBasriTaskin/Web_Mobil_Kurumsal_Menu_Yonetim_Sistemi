@@ -9,7 +9,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Migrations
     /// <inheritdoc />
     public partial class SurveyAdded : Migration
     {
-        /// <inheritdoc />
+        /// <inheritdoc /> 
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
