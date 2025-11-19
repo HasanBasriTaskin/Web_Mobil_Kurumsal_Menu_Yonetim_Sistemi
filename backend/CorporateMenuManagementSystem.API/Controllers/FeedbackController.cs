@@ -36,6 +36,15 @@ namespace CorporateMenuManagementSystem.API.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
+        [HttpGet("feedback/my/{menuId}")]
+        [Authorize]
+        public async Task<IActionResult> GetMyFeedbackForMenu(int menuId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _feedbackService.GetMyFeedbackForMenuAsync(menuId, userId);
+            return StatusCode(result.StatusCode, result);
+        }
+
         [HttpGet("feedback/daily/{menuId}")]
         public async Task<IActionResult> GetDailyFeedback(int menuId)
         {

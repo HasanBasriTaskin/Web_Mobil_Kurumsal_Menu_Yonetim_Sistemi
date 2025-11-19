@@ -14,6 +14,8 @@ export default function UserPage() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [myFeedback, setMyFeedback] = useState(null); // Kullanıcının mevcut yorumu
+  const [isEditMode, setIsEditMode] = useState(false); // Düzenleme modu
   
   // Diğer çalışanların yorumları için state
   const [comments, setComments] = useState([]);
@@ -45,9 +47,10 @@ export default function UserPage() {
     };
   }, []);
 
-  // todayMenu yüklendiğinde yorumları yükle
+  // todayMenu yüklendiğinde yorumları ve kendi yorumumu yükle
   useEffect(() => {
     if (todayMenu) {
+      loadMyFeedback();
       loadComments();
     }
   }, [todayMenu]);
@@ -252,6 +255,40 @@ export default function UserPage() {
     }
   };
 
+  // Kullanıcının kendi yorumunu yükle
+  const loadMyFeedback = async () => {
+    try {
+      if (!todayMenu || !todayMenu.id) {
+        setMyFeedback(null);
+        setIsEditMode(false);
+        return;
+      }
+      
+      const response = await feedbackAPI.getMyFeedback(todayMenu.id);
+      
+      if (response.success && response.data) {
+        setMyFeedback(response.data);
+        setRating(response.data.rating);
+        setComment(response.data.comment || '');
+        setIsEditMode(true);
+      } else {
+        setMyFeedback(null);
+        setIsEditMode(false);
+        setRating(0);
+        setComment('');
+      }
+    } catch (err) {
+      // 404 hatası normaldir (yorum yoksa), diğer hatalarda log
+      if (err.response?.status !== 404) {
+        console.error('Kendi yorumum yüklenirken bir hata oluştu:', err);
+      }
+      setMyFeedback(null);
+      setIsEditMode(false);
+      setRating(0);
+      setComment('');
+    }
+  };
+
   // Puanlama ve yorum gönder
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
@@ -273,21 +310,30 @@ export default function UserPage() {
         return;
       }
       
-      console.log('📝 Feedback gönderiliyor:', {
-        menuId: todayMenu.id,
-        rating,
-        commentLength: comment?.length || 0
-      });
+      let response;
       
-      const response = await feedbackAPI.submit(todayMenu.id, rating, comment);
+      if (isEditMode && myFeedback) {
+        // Düzenleme modu - Mevcut yorumu güncelle
+        console.log('📝 Feedback güncelleniyor:', {
+          feedbackId: myFeedback.id,
+          rating,
+          commentLength: comment?.length || 0
+        });
+        response = await feedbackAPI.update(myFeedback.id, rating, comment);
+      } else {
+        // Yeni yorum modu
+        console.log('📝 Feedback gönderiliyor:', {
+          menuId: todayMenu.id,
+          rating,
+          commentLength: comment?.length || 0
+        });
+        response = await feedbackAPI.submit(todayMenu.id, rating, comment);
+      }
       
       if (response.success) {
-        // Yorumları yeniden yükle
+        // Kendi yorumumu ve diğer yorumları yeniden yükle
+        await loadMyFeedback();
         await loadComments();
-        
-        // Formu temizle
-        setRating(0);
-        setComment('');
       }
       
       setSubmittingFeedback(false);
@@ -527,7 +573,16 @@ export default function UserPage() {
       {todayMenu && (
         <div className="mt-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Menüyü Değerlendirin</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              {isEditMode ? 'Yorumunuzu Güncelleyin' : 'Menüyü Değerlendirin'}
+            </h2>
+            {isEditMode && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  ✓ Bu menü için daha önce yorum yaptınız. Yorumunuzu güncelleyebilirsiniz.
+                </p>
+              </div>
+            )}
             
             {!canSubmitFeedback() ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -596,7 +651,10 @@ export default function UserPage() {
                   disabled={submittingFeedback || rating === 0}
                   className="w-full px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submittingFeedback ? 'Gönderiliyor...' : 'Puanlamayı Gönder'}
+                  {submittingFeedback 
+                    ? (isEditMode ? 'Güncelleniyor...' : 'Gönderiliyor...') 
+                    : (isEditMode ? 'Yorumu Güncelle' : 'Puanlamayı Gönder')
+                  }
                 </button>
               </form>
             )}

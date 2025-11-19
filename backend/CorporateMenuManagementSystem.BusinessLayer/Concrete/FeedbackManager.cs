@@ -78,6 +78,28 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             return Response<FeedbackDto>.Success(feedbackDto, 201);
         }
 
+        public async Task<Response<FeedbackDto>> GetMyFeedbackForMenuAsync(int menuId, string userId)
+        {
+            // 1. Menü var mı kontrolü
+            var menu = await _menuRepository.GetByIdAsync(menuId);
+            if (menu == null)
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("MenuNotFound", "Menü bulunamadı."), 404);
+            }
+
+            // 2. Kullanıcının bu menü için yorumu var mı?
+            var feedbacks = await _feedbackRepository.GetListByFilterAsync(f => f.MenuId == menuId && f.AppUserId == userId);
+            var userFeedback = feedbacks.FirstOrDefault();
+
+            if (userFeedback == null)
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("NotFound", "Bu menü için henüz yorum yapmadınız."), 404);
+            }
+
+            var feedbackDto = _mapper.Map<FeedbackDto>(userFeedback);
+            return Response<FeedbackDto>.Success(feedbackDto, 200);
+        }
+
         public async Task<Response<FeedbackSummaryDto>> GetDailyFeedbackAsync(int menuId)
         {
             var menu = await _menuRepository.GetByIdAsync(menuId);

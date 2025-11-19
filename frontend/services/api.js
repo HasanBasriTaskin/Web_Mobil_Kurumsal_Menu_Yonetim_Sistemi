@@ -294,6 +294,12 @@ export const feedbackAPI = {
     return response.data;
   },
 
+  // GET /api/feedback/my/{menuId} - Kullanıcının bu menü için yorumunu getir
+  getMyFeedback: async (menuId) => {
+    const response = await apiClient.get(`/feedback/my/${menuId}`);
+    return response.data;
+  },
+
   // GET /api/feedback/daily/{menuId} - Günlük geri bildirimler
   getDaily: async (menuId) => {
     const response = await apiClient.get(`/feedback/daily/${menuId}`);
