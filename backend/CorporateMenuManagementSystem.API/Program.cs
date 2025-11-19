@@ -134,12 +134,9 @@ using (var scope = app.Services.CreateScope())
 
     await context.Database.MigrateAsync();
     await SeedData.Initialize(services, userManager, roleManager, configuration);
+    
+    await DataGenerator.SeedAsync(context, userManager, configuration);
 
-    // Sadece Geliştirme Ortamında ve ayar aktif ise sahte veri bas
-    if (app.Environment.IsDevelopment() && configuration.GetValue<bool>("DataFakerSettings:IsEnabled"))
-    {
-        await DataGenerator.SeedAsync(context, userManager, configuration);
-    }
 }
 
 
@@ -155,7 +152,7 @@ app.UseHttpsRedirection();
 // CORS middleware'i Authentication'dan ÖNCE olmalı
 app.UseCors("AllowFrontend");
 
-app.UseAuthentication(); 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
