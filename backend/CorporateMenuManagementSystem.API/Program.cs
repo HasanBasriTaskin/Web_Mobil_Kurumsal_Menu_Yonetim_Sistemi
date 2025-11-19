@@ -75,7 +75,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(
+            "http://localhost:3000",                                
+            "https://corporatemenusystem.taskinnovation.net",       
+            "https://www.corporatemenusystem.taskinnovation.net"    
+        )
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
