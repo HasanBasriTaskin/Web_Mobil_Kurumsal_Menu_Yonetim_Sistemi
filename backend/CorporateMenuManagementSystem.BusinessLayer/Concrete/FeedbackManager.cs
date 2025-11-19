@@ -15,12 +15,14 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
     {
         private readonly IFeedbackRepository _feedbackRepository;
         private readonly IMenuRepository _menuRepository;
+        private readonly IReservationRepository _reservationRepository;
         private readonly IMapper _mapper;
 
-        public FeedbackManager(IFeedbackRepository feedbackRepository, IMenuRepository menuRepository, IMapper mapper)
+        public FeedbackManager(IFeedbackRepository feedbackRepository, IMenuRepository menuRepository, IReservationRepository reservationRepository, IMapper mapper)
         {
             _feedbackRepository = feedbackRepository;
             _menuRepository = menuRepository;
+            _reservationRepository = reservationRepository;
             _mapper = mapper;
         }
 
@@ -28,6 +30,28 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 
         public async Task<Response<FeedbackDto>> SubmitFeedbackAsync(CreateFeedbackDto createFeedbackDto, string userId)
         {
+            // 1. Menü var mı kontrolü
+            var menu = await _menuRepository.GetByIdAsync(createFeedbackDto.MenuId);
+            if (menu == null)
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("MenuNotFound", "Belirtilen menü bulunamadı."), 404);
+            }
+
+            // 2. Menü tarihi geçmiş mi kontrolü (yemek yendikten sonra feedback verilebilir)
+            if (menu.MenuDate.Date >= DateTime.Now.Date)
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("MenuNotPast", "Henüz yenmemiş bir menü için geri bildirim verilemez."), 400);
+            }
+
+            // 3. Kullanıcının bu menü için rezervasyonu var mı kontrolü
+            var userReservations = await _reservationRepository
+                .GetListByFilterAsync(r => r.AppUserId == userId && r.MenuId == createFeedbackDto.MenuId);
+            if (!userReservations.Any())
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("NoReservation", "Bu menü için rezervasyonunuz bulunmadığından geri bildirim veremezsiniz."), 403);
+            }
+
+            // 4. Daha önce bu menü için feedback verilmiş mi kontrolü
             var existingFeedbacks = await _feedbackRepository
                 .GetListByFilterAsync(f => f.MenuId == createFeedbackDto.MenuId && f.AppUserId == userId);
             var existingFeedback = existingFeedbacks.FirstOrDefault();
@@ -37,6 +61,13 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
                 return Response<FeedbackDto>.Fail(new ErrorDetail("Conflict", "Bu menü için zaten bir geri bildirimde bulundunuz."), 409);
             }
 
+            // 5. Rating validation (DTO'da da var ama double-check)
+            if (createFeedbackDto.Rating < 1 || createFeedbackDto.Rating > 5)
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("InvalidRating", "Puan 1 ile 5 arasında olmalıdır."), 400);
+            }
+
+            // 6. Feedback oluştur
             var newFeedback = _mapper.Map<Feedback>(createFeedbackDto);
             newFeedback.AppUserId = userId;
             newFeedback.CreatedDate = DateTime.UtcNow;
@@ -77,6 +108,36 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             return Response<FeedbackSummaryDto>.Success(summary, 200);
         }
         
+        public async Task<Response<FeedbackDto>> UpdateFeedbackAsync(int feedbackId, UpdateFeedbackDto updateFeedbackDto, string userId)
+        {
+            // 1. Feedback var mı ve kullanıcının kendi feedback'i mi kontrolü
+            var existingFeedback = await _feedbackRepository.GetByIdAsync(feedbackId);
+            if (existingFeedback == null)
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("FeedbackNotFound", "Güncellenecek geri bildirim bulunamadı."), 404);
+            }
+
+            if (existingFeedback.AppUserId != userId)
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("Forbidden", "Bu geri bildirimi güncelleme yetkiniz bulunmamaktadır."), 403);
+            }
+
+            // 2. Rating validation
+            if (updateFeedbackDto.Rating < 1 || updateFeedbackDto.Rating > 5)
+            {
+                return Response<FeedbackDto>.Fail(new ErrorDetail("InvalidRating", "Puan 1 ile 5 arasında olmalıdır."), 400);
+            }
+
+            // 3. Feedback'i güncelle
+            existingFeedback.Star = (byte)updateFeedbackDto.Rating;
+            existingFeedback.Comment = updateFeedbackDto.Comment;
+
+            await _feedbackRepository.UpdateAsync(existingFeedback);
+
+            var feedbackDto = _mapper.Map<FeedbackDto>(existingFeedback);
+            return Response<FeedbackDto>.Success(feedbackDto, 200);
+        }
+
         public async Task<Response<List<AdminFeedbackDto>>> GetAllFeedbackAsync()
         {
             var feedbacks = await _feedbackRepository.GetAllFeedbacksWithRelationsAsync();
