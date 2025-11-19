@@ -5,6 +5,7 @@ using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Auth;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Notification;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Profile;
 
 namespace CorporateMenuManagementSystem.API.Mappings
 {
@@ -47,6 +48,9 @@ namespace CorporateMenuManagementSystem.API.Mappings
             // Notification Mappings
             CreateMap<Notification, NotificationDto>()
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedDate));
+
+            // Profile Mappings
+            CreateMap<AppUser, UserProfileDto>();
         }
     }
 }

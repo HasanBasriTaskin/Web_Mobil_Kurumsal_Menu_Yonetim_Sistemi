@@ -36,12 +36,14 @@ builder.Services.AddScoped<IMenuRepository, MenuRepository>();
 builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
 
 
 builder.Services.AddScoped<IMenuService, MenuManager>();
 builder.Services.AddScoped<INotificationService, NotificationManager>();
 builder.Services.AddScoped<IFeedbackService, FeedbackManager>();
 builder.Services.AddScoped<IReservationService, ReservationManager>();
+builder.Services.AddScoped<IProfileService, ProfileManager>();
 
 
 // JWT Authentication Yapılandırması
