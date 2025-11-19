@@ -22,7 +22,7 @@ jobs:
 
     # 3. Projeyi Derle (Publish)
     - name: Publish Backend
-      run: dotnet publish backend/CorporateMenuManagementSystem.API.csproj -c Release -o release_folder
+      run: dotnet publish backend/CorporateMenuManagementSystem.API/CorporateMenuManagementSystem.API.csproj -c Release -o release_folder
 
     # 4. Dosyaları Sunucuya Kopyala
     - name: Copy files via SSH
