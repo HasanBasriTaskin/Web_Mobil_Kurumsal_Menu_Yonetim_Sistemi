@@ -28,7 +28,15 @@ export default function ProtectedRoute({
 
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
-      toast.error('Bu sayfayı görüntülemek için giriş yapmalısınız.');
+      // Check if user just logged out (don't show error toast)
+      const justLoggedOut = typeof window !== 'undefined' 
+        ? localStorage.getItem('justLoggedOut') 
+        : null;
+      
+      if (!justLoggedOut) {
+        toast.error('Bu sayfayı görüntülemek için giriş yapmalısınız.');
+      }
+      
       router.push('/');
       return;
     }

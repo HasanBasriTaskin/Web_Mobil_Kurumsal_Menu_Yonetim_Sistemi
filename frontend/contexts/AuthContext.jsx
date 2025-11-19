@@ -147,6 +147,9 @@ export function AuthProvider({ children }) {
     // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Set a flag to prevent "login required" toast
+    localStorage.setItem('justLoggedOut', 'true');
 
     // Clear state
     setToken(null);
@@ -157,6 +160,11 @@ export function AuthProvider({ children }) {
 
     // Redirect to login
     router.push('/');
+    
+    // Clear the flag after a short delay
+    setTimeout(() => {
+      localStorage.removeItem('justLoggedOut');
+    }, 1000);
   };
 
   // Forgot password
