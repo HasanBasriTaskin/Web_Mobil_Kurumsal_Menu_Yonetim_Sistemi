@@ -7,9 +7,7 @@ export default function ProfilPage() {
   const [userInfo, setUserInfo] = useState({
     name: '',
     email: '',
-    department: '',
-    dietaryPreferences: [],
-    allergies: []
+    department: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -25,29 +23,6 @@ export default function ProfilPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
-  // Diyet tercihleri ve alerjen seçenekleri
-  const dietaryOptions = [
-    'Vejetaryen',
-    'Vegan',
-    'Glutensiz',
-    'Şekersiz',
-    'Düşük Kalorili',
-    'Protein Odaklı'
-  ];
-
-  const allergyOptions = [
-    'Fındık',
-    'Badem',
-    'Yer Fıstığı',
-    'Süt',
-    'Laktoz',
-    'Yumurta',
-    'Balık',
-    'Kabuklu Deniz Ürünleri',
-    'Soya',
-    'Gluten',
-    'Susam'
-  ];
 
   useEffect(() => {
     loadUserProfile();
@@ -69,9 +44,7 @@ export default function ProfilPage() {
         let mockUser = {
           name: 'Kullanıcı',
           email: 'user@company.com',
-          department: 'Yazılım Geliştirme',
-          dietaryPreferences: ['Vejetaryen'],
-          allergies: ['Fındık', 'Laktoz']
+          department: 'Yazılım Geliştirme'
         };
 
         if (storedUser) {
@@ -96,41 +69,6 @@ export default function ProfilPage() {
     }
   };
 
-  // Diyet tercihi ekle/çıkar
-  const toggleDietaryPreference = (preference) => {
-    setUserInfo(prev => {
-      const current = prev.dietaryPreferences || [];
-      if (current.includes(preference)) {
-        return {
-          ...prev,
-          dietaryPreferences: current.filter(p => p !== preference)
-        };
-      } else {
-        return {
-          ...prev,
-          dietaryPreferences: [...current, preference]
-        };
-      }
-    });
-  };
-
-  // Alerjen ekle/çıkar
-  const toggleAllergy = (allergy) => {
-    setUserInfo(prev => {
-      const current = prev.allergies || [];
-      if (current.includes(allergy)) {
-        return {
-          ...prev,
-          allergies: current.filter(a => a !== allergy)
-        };
-      } else {
-        return {
-          ...prev,
-          allergies: [...current, allergy]
-        };
-      }
-    });
-  };
 
   // Profili kaydet
   const handleSave = async (e) => {
@@ -142,8 +80,6 @@ export default function ProfilPage() {
 
       // API çağrısı yapılacak
       // await apiClient.put('/profile/me', {
-      //   dietaryPreferences: userInfo.dietaryPreferences,
-      //   allergies: userInfo.allergies,
       //   department: userInfo.department
       // });
 
@@ -350,58 +286,6 @@ export default function ProfilPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
               />
             </div>
-          </div>
-        </div>
-
-        {/* Diyet Tercihleri */}
-        <div className="mb-8 pb-8 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Diyet Tercihleri</h2>
-          <p className="text-sm text-gray-600 mb-4">Menü planlamasında dikkate alınacak tercihlerinizi seçiniz.</p>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {dietaryOptions.map((option) => {
-              const isSelected = userInfo.dietaryPreferences?.includes(option);
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => toggleDietaryPreference(option)}
-                  className={`px-4 py-2 rounded-lg border-2 font-medium transition-colors text-sm ${
-                    isSelected
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  {option}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Alerjenler */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Alerjenler</h2>
-          <p className="text-sm text-gray-600 mb-4">Alerji durumunuz olan maddeleri işaretleyiniz.</p>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {allergyOptions.map((allergy) => {
-              const isSelected = userInfo.allergies?.includes(allergy);
-              return (
-                <button
-                  key={allergy}
-                  type="button"
-                  onClick={() => toggleAllergy(allergy)}
-                  className={`px-4 py-2 rounded-lg border-2 font-medium transition-colors text-sm ${
-                    isSelected
-                      ? 'bg-red-50 border-red-500 text-red-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  {allergy}
-                </button>
-              );
-            })}
           </div>
         </div>
 

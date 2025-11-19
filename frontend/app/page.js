@@ -165,20 +165,27 @@ export default function LoginPage() {
         // Hata mesajını backend'den al
         let errorMessage = 'Kayıt olurken bir hata oluştu';
         
-        if (response.errors && Array.isArray(response.errors)) {
-          // ErrorDetail formatındaki hatalar
-          errorMessage = response.errors.map(err => err.message || err.error).filter(Boolean).join(', ') || errorMessage;
-        } else if (response.errors && typeof response.errors === 'object') {
-          // Validation hataları (field bazlı)
-          const validationErrors = [];
-          Object.keys(response.errors).forEach(key => {
-            if (Array.isArray(response.errors[key])) {
-              response.errors[key].forEach(msg => {
-                validationErrors.push(msg);
-              });
-            }
-          });
-          errorMessage = validationErrors.length > 0 ? validationErrors.join(', ') : errorMessage;
+        console.log('Register response (error):', response);
+        
+        if (response.errors) {
+          if (Array.isArray(response.errors)) {
+            // ErrorDetail formatındaki hatalar
+            const messages = response.errors
+              .map(err => err.message || err.error || err.field)
+              .filter(Boolean);
+            errorMessage = messages.length > 0 ? messages.join(', ') : errorMessage;
+          } else if (typeof response.errors === 'object') {
+            // Validation hataları (field bazlı)
+            const validationErrors = [];
+            Object.keys(response.errors).forEach(key => {
+              if (Array.isArray(response.errors[key])) {
+                response.errors[key].forEach(msg => {
+                  validationErrors.push(msg);
+                });
+              }
+            });
+            errorMessage = validationErrors.length > 0 ? validationErrors.join(', ') : errorMessage;
+          }
         } else if (response.message) {
           errorMessage = response.message;
         }
@@ -188,35 +195,55 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error('Register error:', error);
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
+      
+      // Network hatası kontrolü
+      if (!error.response) {
+        setError('Backend\'e bağlanılamadı. Backend çalışıyor mu kontrol edin (http://localhost:5000)');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Response data'yı al (bazen data direkt response'da olabilir)
+      const responseData = error.response?.data || error.response || {};
       
       // Backend validation hatalarını topla
-      if (error.response?.data?.errors) {
-        const validationErrors = error.response.data.errors;
-        const errorMessages = [];
+      if (responseData.errors) {
+        let errorMessage = 'Kayıt olurken bir hata oluştu';
         
-        // Tüm validation hatalarını topla
-        Object.keys(validationErrors).forEach(key => {
-          if (Array.isArray(validationErrors[key])) {
-            validationErrors[key].forEach(msg => {
-              errorMessages.push(msg);
-            });
-          }
-        });
-        
-        if (errorMessages.length > 0) {
-          setError(errorMessages.join(', '));
-        } else {
-          setError('Kayıt olurken bir hata oluştu');
+        if (Array.isArray(responseData.errors)) {
+          // ErrorDetail formatındaki hatalar
+          const messages = responseData.errors
+            .map(err => err.message || err.error || err.field)
+            .filter(Boolean);
+          errorMessage = messages.length > 0 ? messages.join(', ') : errorMessage;
+        } else if (typeof responseData.errors === 'object') {
+          // Validation hataları (field bazlı)
+          const validationErrors = [];
+          Object.keys(responseData.errors).forEach(key => {
+            if (Array.isArray(responseData.errors[key])) {
+              responseData.errors[key].forEach(msg => {
+                validationErrors.push(msg);
+              });
+            }
+          });
+          errorMessage = validationErrors.length > 0 ? validationErrors.join(', ') : errorMessage;
         }
-      } else {
-        // Backend'den gelen hata mesajını göster
-        const errorMessage = error.response?.data?.errors?.[0]?.message ||
-                            error.response?.data?.message ||
-                            error.response?.data?.title ||
-                            error.message ||
-                            'Kayıt olurken bir hata oluştu';
+        
         setError(errorMessage);
+      } else if (responseData.message) {
+        setError(responseData.message);
+      } else if (responseData.title) {
+        setError(responseData.title);
+      } else {
+        // Genel hata mesajı
+        const statusText = error.response?.statusText || '';
+        const status = error.response?.status || 'Unknown';
+        setError(`Kayıt olurken bir hata oluştu (${status} ${statusText})`);
       }
+      
       setIsLoading(false);
     }
   };
@@ -617,7 +644,7 @@ export default function LoginPage() {
           {/* Test Bilgileri (Geliştirme için) */}
           <div className="mt-6 p-4 bg-gray-100 rounded-lg text-xs text-gray-600">
             <p className="font-semibold mb-2">Test Kullanıcıları:</p>
-            <p>Admin: admin@company.com / admin123</p>
+            <p>Admin: admin@taskinnovation.com / Taskinnovation1234!</p>
             <p>User: user@company.com / user123</p>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { useState } from 'react';
 export default function ProfilPage() {
   const [profileInfo, setProfileInfo] = useState({
     fullName: 'Administrator',
-    email: 'admin@company.com',
+    email: 'admin@taskinnovation.com',
   });
 
   const [passwordForm, setPasswordForm] = useState({
