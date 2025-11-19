@@ -234,14 +234,11 @@ export default function UserPage() {
       
       if (response.success && response.data) {
         // Backend'den gelen yorumları formatlayalım
-        const formattedComments = response.data.comments?.map(c => ({
-          id: c.id || c.feedbackId,
-          userName: c.userName || c.user?.name || 'Anonim',
-          comment: c.comment,
+        const formattedComments = response.data.comments?.map((c, index) => ({
+          id: index, // Unique key için index kullanıyoruz
           rating: c.rating,
-          likes: 0,
-          userLiked: false,
-          createdAt: c.createdAt
+          comment: c.comment,
+          time: c.time
         })) || [];
         setComments(formattedComments);
         setLoadingComments(false);
@@ -252,31 +249,6 @@ export default function UserPage() {
     } catch (err) {
       setLoadingComments(false);
       console.error('Yorumlar yüklenirken bir hata oluştu:', err);
-    }
-  };
-
-  // Yorum beğen
-  const handleLikeComment = async (commentId) => {
-    try {
-      // API çağrısı yapılacak
-      // await apiClient.post(`/feedback/${commentId}/like`);
-
-      // Mock - Beğeni durumunu güncelle
-      setComments(prevComments =>
-        prevComments.map(comment => {
-          if (comment.id === commentId) {
-            const newLiked = !comment.userLiked;
-            return {
-              ...comment,
-              userLiked: newLiked,
-              likes: newLiked ? comment.likes + 1 : comment.likes - 1
-            };
-          }
-          return comment;
-        })
-      );
-    } catch (err) {
-      console.error('Yorum beğenilirken bir hata oluştu:', err);
     }
   };
 
@@ -645,11 +617,11 @@ export default function UserPage() {
             ) : (
               <div className="space-y-4">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                  <div key={comment.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-semibold text-gray-900">{comment.userName}</span>
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="font-semibold text-gray-900">Anonim</span>
                           <div className="flex items-center gap-1">
                             {[1, 2, 3, 4, 5].map((star) => (
                               <svg
@@ -664,43 +636,12 @@ export default function UserPage() {
                               </svg>
                             ))}
                           </div>
+                          <span className="text-xs text-gray-500">{comment.time}</span>
                         </div>
                         {comment.comment && (
-                          <p className="text-gray-700 mb-2">{comment.comment}</p>
+                          <p className="text-gray-700">{comment.comment}</p>
                         )}
-                        <span className="text-xs text-gray-500">
-                          {new Date(comment.createdAt).toLocaleString('tr-TR', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
                       </div>
-                      <button
-                        onClick={() => handleLikeComment(comment.id)}
-                        className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-colors ${
-                          comment.userLiked
-                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <svg
-                          className={`w-5 h-5 ${comment.userLiked ? 'fill-current' : ''}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                          />
-                        </svg>
-                        <span className="text-sm font-medium">{comment.likes}</span>
-                      </button>
                     </div>
                   </div>
                 ))}
