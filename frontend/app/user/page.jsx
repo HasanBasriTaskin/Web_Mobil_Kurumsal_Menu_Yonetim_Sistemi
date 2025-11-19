@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { menuAPI, reservationAPI, feedbackAPI } from '@/services/api';
 
 export default function UserPage() {
@@ -294,14 +295,18 @@ export default function UserPage() {
         await loadMyFeedback();
         await loadComments();
         setError('');
+        toast.success(isEditMode ? 'Yorumunuz başarıyla güncellendi!' : 'Yorumunuz başarıyla gönderildi!');
       } else {
-        setError(response.message || 'Bir hata oluştu.');
+        const errorMsg = response.message || 'Bir hata oluştu.';
+        setError(errorMsg);
+        toast.error(errorMsg);
       }
       
       setSubmittingFeedback(false);
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || 'Yorum güncellenirken bir hata oluştu.';
       setError(errorMessage);
+      toast.error(errorMessage);
       setSubmittingFeedback(false);
     }
   };
