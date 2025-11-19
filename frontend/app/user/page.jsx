@@ -80,8 +80,6 @@ export default function UserPage() {
         setLoading(false);
       }
     } catch (err) {
-      console.error('Menü yükleme hatası:', err);
-      // Hata durumunda da null set et (Pazar veya menü yok durumu)
       setTodayMenu(null);
       setLoading(false);
     }
@@ -106,7 +104,6 @@ export default function UserPage() {
         setReservationId(null);
       }
     } catch (err) {
-      console.error('Rezervasyon durumu yükleme hatası:', err);
       setReservationStatus('not_reserved');
       setReservationId(null);
     }
@@ -131,10 +128,7 @@ export default function UserPage() {
     }
 
     try {
-      if (!todayMenu || !todayMenu.id) {
-        console.error('Menü ID bulunamadı');
-        return;
-      }
+      if (!todayMenu?.id) return;
       
       const response = await reservationAPI.create(todayMenu.id);
       
@@ -143,7 +137,6 @@ export default function UserPage() {
         await loadReservationStatus();
       }
     } catch (err) {
-      console.error('Rezervasyon yapılırken bir hata oluştu:', err);
       setError('Rezervasyon yapılırken bir hata oluştu.');
     }
   };
@@ -178,10 +171,7 @@ export default function UserPage() {
     setShowCancelConfirm(false);
 
     try {
-      if (!reservationId) {
-        console.error('Rezervasyon ID bulunamadı');
-        return;
-      }
+      if (!reservationId) return;
       
       const response = await reservationAPI.cancel(reservationId);
       
@@ -189,20 +179,14 @@ export default function UserPage() {
         setReservationStatus('not_reserved');
         setReservationId(null);
         await loadReservationStatus();
-        
-        // Başarı mesajı göster
         setCancelMessage('Rezervasyonunuz iptal edildi.');
         setShowCancelConfirm(true);
-        
-        // 2 saniye sonra mesajı kapat
         setTimeout(() => {
           setShowCancelConfirm(false);
           setCancelMessage('');
         }, 2000);
       }
     } catch (err) {
-      console.error('Rezervasyon iptal edilirken bir hata oluştu:', err);
-      // Backend'den hata gelirse (örn: saat geçmişse) göster
       const errorMessage = err.response?.data?.message || 'Rezervasyon iptal edilirken bir hata oluştu.';
       setError(errorMessage);
       setCancelMessage(errorMessage);
@@ -236,9 +220,8 @@ export default function UserPage() {
       const response = await feedbackAPI.getDaily(todayMenu.id);
       
       if (response.success && response.data) {
-        // Backend'den gelen yorumları formatlayalım
         const formattedComments = response.data.comments?.map((c, index) => ({
-          id: index, // Unique key için index kullanıyoruz
+          id: index,
           rating: c.rating,
           comment: c.comment,
           time: c.time
@@ -251,7 +234,6 @@ export default function UserPage() {
       }
     } catch (err) {
       setLoadingComments(false);
-      console.error('Yorumlar yüklenirken bir hata oluştu:', err);
     }
   };
 
@@ -278,10 +260,6 @@ export default function UserPage() {
         setComment('');
       }
     } catch (err) {
-      // 404 hatası normaldir (yorum yoksa), diğer hatalarda log
-      if (err.response?.status !== 404) {
-        console.error('Kendi yorumum yüklenirken bir hata oluştu:', err);
-      }
       setMyFeedback(null);
       setIsEditMode(false);
       setRating(0);
@@ -289,11 +267,10 @@ export default function UserPage() {
     }
   };
 
-  // Puanlama ve yorum gönder
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     
-    if (!canSubmitFeedback()) {
+    if (!isEditMode && !canSubmitFeedback()) {
       return;
     }
 
@@ -304,47 +281,27 @@ export default function UserPage() {
     try {
       setSubmittingFeedback(true);
       
-      if (!todayMenu || !todayMenu.id) {
-        console.error('Menü ID bulunamadı');
+      if (!todayMenu?.id) {
         setSubmittingFeedback(false);
         return;
       }
       
-      let response;
-      
-      if (isEditMode && myFeedback) {
-        // Düzenleme modu - Mevcut yorumu güncelle
-        console.log('📝 Feedback güncelleniyor:', {
-          feedbackId: myFeedback.id,
-          rating,
-          commentLength: comment?.length || 0
-        });
-        response = await feedbackAPI.update(myFeedback.id, rating, comment);
-      } else {
-        // Yeni yorum modu
-        console.log('📝 Feedback gönderiliyor:', {
-          menuId: todayMenu.id,
-          rating,
-          commentLength: comment?.length || 0
-        });
-        response = await feedbackAPI.submit(todayMenu.id, rating, comment);
-      }
+      const response = isEditMode && myFeedback
+        ? await feedbackAPI.update(myFeedback.id, rating, comment)
+        : await feedbackAPI.submit(todayMenu.id, rating, comment);
       
       if (response.success) {
-        // Kendi yorumumu ve diğer yorumları yeniden yükle
         await loadMyFeedback();
         await loadComments();
+        setError('');
+      } else {
+        setError(response.message || 'Bir hata oluştu.');
       }
       
       setSubmittingFeedback(false);
     } catch (err) {
-      console.error('❌ Puanlama gönderilirken bir hata oluştu:', err);
-      console.error('❌ Hata detayları:', {
-        status: err.response?.status,
-        errors: err.response?.data?.errors,
-        message: err.response?.data?.message,
-        fullData: err.response?.data
-      });
+      const errorMessage = err.response?.data?.message || err.message || 'Yorum güncellenirken bir hata oluştu.';
+      setError(errorMessage);
       setSubmittingFeedback(false);
     }
   };
@@ -569,7 +526,6 @@ export default function UserPage() {
         </div>
       </div>
 
-      {/* Puanlama Formu - Sadece bugünün menüsü için, yemek yedikten sonra aktif */}
       {todayMenu && (
         <div className="mt-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -584,7 +540,7 @@ export default function UserPage() {
               </div>
             )}
             
-            {!canSubmitFeedback() ? (
+            {!canSubmitFeedback() && !isEditMode ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <div className="flex items-center gap-3">
                   <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -662,8 +618,7 @@ export default function UserPage() {
         </div>
       )}
 
-      {/* Diğer Çalışanların Yorumları */}
-      {todayMenu && canSubmitFeedback() && (
+      {todayMenu && (
         <div className="mt-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Diğer Çalışanların Yorumları</h2>
