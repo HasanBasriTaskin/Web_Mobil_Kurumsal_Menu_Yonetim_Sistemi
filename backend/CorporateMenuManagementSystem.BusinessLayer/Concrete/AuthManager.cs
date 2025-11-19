@@ -94,9 +94,10 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             }
 
             var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var encodedToken = Uri.EscapeDataString(resetToken);
 
             // TODO: E-posta gönderme servisi entegre edilecek.
-            Console.WriteLine($"Password Reset Token for {user.Email}: {resetToken}");
+            Console.WriteLine($"Password Reset Token for {user.Email}: {encodedToken}");
             
             return Response<NoContentDto>.Success(new NoContentDto(), 200);
         }
