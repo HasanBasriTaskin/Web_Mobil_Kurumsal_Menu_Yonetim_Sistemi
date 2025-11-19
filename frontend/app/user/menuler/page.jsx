@@ -7,42 +7,57 @@ export default function MenulerPage() {
   const [currentWeekMenu, setCurrentWeekMenu] = useState([]);
   const [nextWeekMenu, setNextWeekMenu] = useState([]);
   const [selectedWeek, setSelectedWeek] = useState('current');
-  const [viewMode, setViewMode] = useState('week'); // 'week', 'list', 'daily'
-  const [selectedDate, setSelectedDate] = useState(null); // Günlük görünüm için
+  const [viewMode, setViewMode] = useState('week');
+  const [selectedDate, setSelectedDate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [reservations, setReservations] = useState([]);
+  const [reservationsMap, setReservationsMap] = useState(new Map());
   const [reserving, setReserving] = useState('');
-  const [showReservationConfirm, setShowReservationConfirm] = useState(false); // Onay kutusu için state
-  const [pendingReservation, setPendingReservation] = useState(null); // Bekleyen rezervasyon işlemi {date, action: 'create' | 'cancel'}
+  const [showReservationConfirm, setShowReservationConfirm] = useState(false);
+  const [pendingReservation, setPendingReservation] = useState(null);
 
   useEffect(() => {
     loadMenus();
     loadReservations();
   }, [selectedWeek]);
 
-  // Rezervasyonları yükle
   const loadReservations = async () => {
     try {
       const response = await reservationAPI.getMyReservations();
-      console.log('📋 Rezervasyonlar yükleniyor:', response);
       
       if (response.success && response.data) {
-        // Rezervasyon tarihlerini çıkar
-        const dates = response.data.map(r => r.menuDate?.split('T')[0] || r.date);
-        console.log('✅ Rezerve edilmiş tarihler:', dates);
-        setReservations(dates);
+        const map = new Map();
+        response.data.forEach(r => {
+          if (r.menuId) {
+            map.set(r.menuId, {
+              id: r.id,
+              menuId: r.menuId,
+              menuDate: r.menuDate,
+              reservationStatus: r.reservationStatus
+            });
+          }
+        });
+        setReservationsMap(map);
       } else {
-        console.log('⚠️ Rezervasyon response başarısız veya data yok:', response);
-        setReservations([]);
+        setReservationsMap(new Map());
       }
     } catch (err) {
-      console.error('❌ Rezervasyonlar yüklenemedi:', err);
-      setReservations([]);
+      setReservationsMap(new Map());
     }
   };
 
-  // Menüleri yükle
+  const normalizeMenus = (menus) => {
+    return menus
+      .map(menu => {
+        const dateValue = menu.menuDate || menu.date;
+        return { ...menu, date: dateValue, menuDate: dateValue };
+      })
+      .filter(menu => {
+        const menuDate = new Date(menu.date);
+        return !isNaN(menuDate.getTime()) && menuDate.getDay() !== 0;
+      });
+  };
+
   const loadMenus = async () => {
     try {
       setLoading(true);
@@ -51,53 +66,14 @@ export default function MenulerPage() {
       const currentResponse = await menuAPI.getWeekly('current');
       const nextResponse = await menuAPI.getWeekly('next');
       
-      console.log('API Responses:', { currentResponse, nextResponse });
-      
       if (currentResponse.success && currentResponse.data) {
-        console.log('Current Response Data:', currentResponse.data);
-        
-        // Backend'den gelen verileri normalize et ve Pazar günü filtrele
-        const normalizedCurrent = currentResponse.data
-          .map(menu => {
-            const dateValue = menu.menuDate || menu.date;
-            return {
-              ...menu,
-              date: dateValue, // Kesin olarak date field'ını set et
-              menuDate: dateValue // menuDate'i de koru (geriye uyumluluk için)
-            };
-          })
-          .filter(menu => {
-            const menuDate = new Date(menu.date);
-            const isValid = !isNaN(menuDate.getTime());
-            const isSunday = menuDate.getDay() === 0;
-            return isValid && !isSunday; // Geçerli ve Pazar değilse
-          });
-        console.log('✅ Normalized Current Week:', normalizedCurrent);
-        setCurrentWeekMenu(normalizedCurrent);
+        setCurrentWeekMenu(normalizeMenus(currentResponse.data));
       } else {
-        console.log('Current response failed or no data:', currentResponse);
         setCurrentWeekMenu([]);
       }
       
       if (nextResponse.success && nextResponse.data) {
-        // Backend'den gelen verileri normalize et ve Pazar günü filtrele
-        const normalizedNext = nextResponse.data
-          .map(menu => {
-            const dateValue = menu.menuDate || menu.date;
-            return {
-              ...menu,
-              date: dateValue, // Kesin olarak date field'ını set et
-              menuDate: dateValue // menuDate'i de koru (geriye uyumluluk için)
-            };
-          })
-          .filter(menu => {
-            const menuDate = new Date(menu.date);
-            const isValid = !isNaN(menuDate.getTime());
-            const isSunday = menuDate.getDay() === 0;
-            return isValid && !isSunday; // Geçerli ve Pazar değilse
-          });
-        console.log('✅ Normalized Next Week:', normalizedNext);
-        setNextWeekMenu(normalizedNext);
+        setNextWeekMenu(normalizeMenus(nextResponse.data));
       } else {
         setNextWeekMenu([]);
       }
@@ -109,187 +85,127 @@ export default function MenulerPage() {
     }
   };
 
-  // Tarihi Türkçe formatında göster
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Tarih Belirtilmemiş';
     
     try {
       const date = new Date(dateStr);
-      
-      // Invalid date kontrolü
-      if (isNaN(date.getTime())) {
-        return 'Geçersiz Tarih';
-      }
+      if (isNaN(date.getTime())) return 'Geçersiz Tarih';
       
       const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
       const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
                       'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
       return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
-    } catch (err) {
-      console.error('Tarih formatlama hatası:', err, dateStr);
+    } catch {
       return 'Tarih Hatası';
     }
   };
 
-  // Bugün mü kontrolü
   const isToday = (dateStr) => {
-    const today = new Date().toISOString().split('T')[0];
-    return dateStr === today;
+    return new Date().toISOString().split('T')[0] === dateStr;
   };
 
-  // Gelecek gün mü kontrolü (bugün ve geçmiş günler için false)
-  const isFutureDate = (dateStr) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const menuDate = new Date(dateStr);
-    menuDate.setHours(0, 0, 0, 0);
-    return menuDate > today;
+  const hasReservation = (menuId) => {
+    return reservationsMap.has(menuId);
   };
 
-  // Rezervasyon yapılabilir mi kontrolü
-  // Bugün için yemek saatinden 1 saat öncesine kadar, gelecek tarihler için her zaman yapılabilir
-  const canMakeReservation = (dateStr) => {
-    const today = new Date().toISOString().split('T')[0];
+  const getReservation = (menuId) => {
+    return reservationsMap.get(menuId);
+  };
+
+  const getDeadline = (menuDateStr) => {
+    const menuDate = new Date(menuDateStr);
+    menuDate.setHours(11, 30, 0, 0);
+    const deadline = new Date(menuDate);
+    deadline.setHours(deadline.getHours() - 1);
+    return deadline;
+  };
+
+  const canCancelReservation = (menuDateStr) => {
+    if (!menuDateStr) return false;
+    return new Date() < getDeadline(menuDateStr);
+  };
+
+  const canMakeReservationForMenu = (menuDateStr) => {
+    if (!menuDateStr) return false;
+    return new Date() < getDeadline(menuDateStr);
+  };
+
+  const isPastMenu = (menuDateStr) => {
+    if (!menuDateStr) return false;
+    const menuDate = new Date(menuDateStr);
+    menuDate.setHours(11, 30, 0, 0);
+    return new Date() > menuDate;
+  };
+
+  const getReservationStatusMessage = (menu) => {
+    if (!menu?.id) return '';
     
-    // Gelecek tarihler için rezervasyon yapılabilir
-    if (isFutureDate(dateStr)) {
-      return true;
+    const reservation = getReservation(menu.id);
+    const isPast = isPastMenu(menu.menuDate);
+    const canCancel = menu.menuDate ? canCancelReservation(menu.menuDate) : false;
+    const canMake = menu.menuDate ? canMakeReservationForMenu(menu.menuDate) : false;
+    
+    if (reservation) {
+      return isPast ? 'Geçmiş - Yapılan Rezervasyon' : 'Rezervasyon yapıldı';
+    } else {
+      if (isPast) return 'Geçmiş - Rezervasyon yapılmadı';
+      if (!canMake) return 'Rezervasyon yapılmadı';
+      return '';
     }
-    
-    // Bugün için yemek saatinden 1 saat öncesine kadar rezervasyon yapılabilir
-    if (dateStr === today) {
-      const now = new Date();
-      const reservationDeadline = new Date();
-      reservationDeadline.setHours(10, 30, 0, 0); // Sabah 10:30 (yemek 11:30'da başlıyor, 1 saat öncesi)
-      
-      return now < reservationDeadline;
-    }
-    
-    // Geçmiş tarihler için rezervasyon yapılamaz
-    return false;
   };
 
-  // İptal edilebilir mi kontrol et (bugün için belirli saate kadar)
-  // Öğlen yemeği 11:30 - 14:00 arası, iptal için son saat: 10:30 (11:30'dan 1 saat önce)
-  const canCancel = (dateStr) => {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Bugün değilse her zaman iptal edilebilir
-    if (dateStr !== today) return true;
-    
-    // Bugün ise saat 10:30'u geçtiyse iptal edilemez
-    const now = new Date();
-    const cancelDeadline = new Date();
-    cancelDeadline.setHours(10, 30, 0, 0); // Sabah 10:30 (yemek 11:30'da başlıyor)
-    
-    return now < cancelDeadline;
-  };
-
-  // Rezervasyon onayını göster
-  const handleReservationClick = (date, action) => {
-    setPendingReservation({ date, action });
+  const handleReservationClick = (menuId, action) => {
+    setPendingReservation({ menuId, action });
     setShowReservationConfirm(true);
   };
 
-  // Rezervasyon işlemini onayla ve yap
   const handleConfirmReservation = async () => {
     if (!pendingReservation) return;
 
-    const { date, action } = pendingReservation;
+    const { menuId, action } = pendingReservation;
     setShowReservationConfirm(false);
-    setReserving(date);
+    setReserving(menuId.toString());
 
     try {
+      const menus = [...currentWeekMenu, ...nextWeekMenu];
+      const menu = menus.find(m => m.id === menuId);
+      
+      if (!menu) {
+        setReserving('');
+        return;
+      }
+
       if (action === 'cancel') {
-        // Önce saat kontrolü yap
-        if (!canCancel(date)) {
+        const reservation = getReservation(menuId);
+        if (!reservation?.id || (menu.menuDate && !canCancelReservation(menu.menuDate))) {
           setReserving('');
           return;
         }
-        
-        // Date'den rezervasyon ID'sini bul
-        const response = await reservationAPI.getMyReservations();
-        if (response.success && response.data) {
-          const reservation = response.data.find(r => 
-            (r.menuDate?.split('T')[0] || r.date) === date
-          );
-          
-          if (reservation && reservation.id) {
-            await reservationAPI.cancel(reservation.id);
-            await loadReservations(); // Rezervasyonları yeniden yükle
-          }
-        }
-        
-        setReserving('');
+        await reservationAPI.cancel(reservation.id);
       } else {
-        // Date'den menü ID'sini bul
-        const menus = selectedWeek === 'current' ? currentWeekMenu : nextWeekMenu;
-        
-        // Tarihi normalize et (saat bilgisi olmadan karşılaştır)
-        const normalizedTargetDate = date.split('T')[0];
-        
-        const menu = menus.find(m => {
-          // Backend'den gelen field menuDate olabilir
-          const menuFullDate = m.menuDate || m.date;
-          const menuDateStr = menuFullDate?.split('T')[0];
-          return menuDateStr === normalizedTargetDate;
-        });
-        
-        if (menu && menu.id) {
-          console.log('✅ Rezervasyon yapılıyor:', {
-            menuId: menu.id,
-            menuDate: menu.menuDate || menu.date
-          });
-          await reservationAPI.create(menu.id);
-          await loadReservations(); // Rezervasyonları yeniden yükle
-        } else {
-          console.error('❌ Menü bulunamadı!', { 
-            arananTarih: normalizedTargetDate,
-            menuler: menus.map(m => ({ 
-              id: m.id, 
-              tarih: (m.menuDate || m.date)?.split('T')[0]
-            }))
-          });
+        if (menu.menuDate && !canMakeReservationForMenu(menu.menuDate)) {
+          setReserving('');
+          return;
         }
-        
-        setReserving('');
+        await reservationAPI.create(menu.id);
       }
+      
+      await loadReservations();
+      setReserving('');
     } catch (err) {
-      console.error('❌ Rezervasyon işlemi sırasında bir hata oluştu:', err);
-      
-      // 409 Conflict - Zaten rezervasyon var
       if (err.response?.status === 409) {
-        console.warn('⚠️ Bu tarih için zaten rezervasyonunuz var!');
-        // Rezervasyonları yeniden yükle (muhtemelen zaten rezervasyon yapılmış)
         await loadReservations();
-      } else if (err.response?.status === 400) {
-        console.error('❌ Geçersiz istek. Menü ID:', err.response?.data);
-      } else {
-        console.error('❌ Beklenmeyen hata:', {
-          status: err.response?.status,
-          message: err.response?.data?.message || err.message,
-          data: err.response?.data
-        });
       }
-      
       setReserving('');
     }
     
     setPendingReservation(null);
   };
 
-  const weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
   const selectedMenu = selectedWeek === 'current' ? currentWeekMenu : nextWeekMenu;
   
-  // Günlük görünüm için menü seç
   useEffect(() => {
-    if (viewMode === 'daily' && selectedMenu.length > 0 && !selectedDate) {
-      // Bugünün menüsünü varsayılan olarak seç
-      const today = new Date().toISOString().split('T')[0];
-      const todayMenu = selectedMenu.find(m => m.date === today);
-      setSelectedDate(todayMenu ? todayMenu.date : selectedMenu[0].date);
-    }
-    // selectedMenu değiştiğinde ve günlük görünüm aktifse güncelle
     if (viewMode === 'daily' && selectedMenu.length > 0) {
       const today = new Date().toISOString().split('T')[0];
       const todayMenu = selectedMenu.find(m => m.date === today);
@@ -297,7 +213,7 @@ export default function MenulerPage() {
         setSelectedDate(todayMenu ? todayMenu.date : selectedMenu[0].date);
       }
     }
-  }, [viewMode, selectedWeek]); // selectedWeek değiştiğinde tetiklenir
+  }, [viewMode, selectedWeek]);
 
   if (loading) {
     return (
@@ -312,7 +228,6 @@ export default function MenulerPage() {
 
   return (
     <div className="p-8 relative">
-      {/* Onay Mesajı Modal */}
       {showReservationConfirm && pendingReservation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
@@ -328,11 +243,21 @@ export default function MenulerPage() {
               <p className="text-sm text-gray-600 mb-6">
                 {pendingReservation.action === 'cancel' 
                   ? `Bu rezervasyonu iptal etmek istediğinize emin misiniz?`
-                  : `Bu tarih için rezervasyon yapmak istediğinize emin misiniz?`}
+                  : `Bu menü için rezervasyon yapmak istediğinize emin misiniz?`}
               </p>
-              <p className="text-xs text-gray-500 mb-6">
-                {formatDate(pendingReservation.date)}
-              </p>
+              {(() => {
+                const menus = [...currentWeekMenu, ...nextWeekMenu];
+                const menu = menus.find(m => m.id === pendingReservation.menuId);
+                if (menu) {
+                  return (
+                    <div className="text-xs text-gray-500 mb-6 space-y-1">
+                      <p>{formatDate(menu.date || menu.menuDate)}</p>
+                      <p className="font-medium">{menu.mainCourse}</p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               <div className="flex gap-3 justify-center">
                 <button
                   onClick={() => {
@@ -359,7 +284,6 @@ export default function MenulerPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Haftalık Menü</h1>
         <p className="text-gray-600">Bu hafta ve gelecek hafta menülerini görüntüleyebilirsiniz</p>
@@ -371,7 +295,6 @@ export default function MenulerPage() {
         </div>
       )}
 
-      {/* Görünüm Modları */}
       <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex gap-4 mb-4">
           <button
@@ -406,7 +329,6 @@ export default function MenulerPage() {
           </button>
         </div>
 
-        {/* Hafta Seçimi */}
         <div className="flex gap-4 border-t border-gray-200 pt-4">
           <button
             onClick={() => setSelectedWeek('current')}
@@ -431,10 +353,8 @@ export default function MenulerPage() {
         </div>
       </div>
 
-      {/* Menü Görünümleri */}
       {selectedMenu.length > 0 ? (
         <>
-          {/* Haftalık Görünüm */}
           {viewMode === 'week' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {selectedMenu.map((menu, index) => {
@@ -481,44 +401,65 @@ export default function MenulerPage() {
                   </div>
                 </div>
 
-                {/* Rezervasyon Butonu - Sadece haftalık görünümde */}
-                {viewMode === 'week' && canMakeReservation(menu.date) && (() => {
-                  const isReserved = reservations.includes(menu.date);
-                  const isReserving = reserving === menu.date;
-                  const cancelable = isReserved ? canCancel(menu.date) : true;
+                {/* Rezervasyon Durumu ve Butonu */}
+                {viewMode === 'week' && (() => {
+                  const isReserved = hasReservation(menu.id);
+                  const isReserving = reserving === menu.id.toString();
+                  const canCancel = menu.menuDate ? canCancelReservation(menu.menuDate) : false;
+                  const canMake = menu.menuDate ? canMakeReservationForMenu(menu.menuDate) : false;
+                  const statusMessage = getReservationStatusMessage(menu);
+                  const showButton = canMake || (isReserved && canCancel);
                   
                   const handleReservation = () => {
                     if (isReserved) {
-                      // Önce saat kontrolü yap
-                      if (!canCancel(menu.date)) {
-                        return;
-                      }
-                      handleReservationClick(menu.date, 'cancel');
+                      if (!canCancel) return;
+                      handleReservationClick(menu.id, 'cancel');
                     } else {
-                      handleReservationClick(menu.date, 'create');
+                      if (!canMake) return;
+                      handleReservationClick(menu.id, 'create');
                     }
                   };
 
                   return (
                     <div className="mt-4 space-y-2">
-                      <button
-                        onClick={handleReservation}
-                        disabled={isReserving || (isReserved && !cancelable)}
-                        className={`w-full px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
-                          isReserved
-                            ? cancelable
-                              ? 'bg-red-600 text-white hover:bg-red-700'
-                              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      >
-                        {isReserving ? 'İşleniyor...' : 
-                         isReserved ? (cancelable ? 'Rezervasyonu İptal Et' : 'İptal Edilemez') : 
-                         'Rezervasyon Yap'}
-                      </button>
-                      {isReserved && !cancelable && (
+                      {statusMessage && (
+                        <p className={`text-xs text-center ${
+                          isReserved 
+                            ? (!canCancel ? 'text-gray-500' : 'text-green-600')
+                            : (!canMake ? 'text-gray-500' : 'text-gray-600')
+                        }`}>
+                          {statusMessage}
+                        </p>
+                      )}
+                      
+                      {showButton && (
+                        <button
+                          onClick={handleReservation}
+                          disabled={isReserving || (isReserved && !canCancel) || (!isReserved && !canMake)}
+                          className={`w-full px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                            isReserved
+                              ? canCancel
+                                ? 'bg-red-600 text-white hover:bg-red-700'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : canMake
+                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {isReserving ? 'İşleniyor...' : 
+                           isReserved ? (canCancel ? 'Rezervasyonu İptal Et' : 'İptal Edilemez') : 
+                           'Rezervasyon Yap'}
+                        </button>
+                      )}
+                      
+                      {isReserved && !canCancel && (
                         <p className="text-xs text-gray-500 text-center">
-                          İptal için son saat geçti (10:30)
+                          İptal için son saat geçti
+                        </p>
+                      )}
+                      {!isReserved && !canMake && menu.menuDate && !isPastMenu(menu.menuDate) && (
+                        <p className="text-xs text-gray-500 text-center">
+                          Rezervasyon için son saat geçti
                         </p>
                       )}
                     </div>
@@ -530,13 +471,15 @@ export default function MenulerPage() {
             </div>
           )}
 
-          {/* Liste Görünümü */}
           {viewMode === 'list' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 divide-y divide-gray-200">
               {selectedMenu.map((menu, index) => {
                 const isTodayMenu = isToday(menu.date);
-                const isReserved = reservations.includes(menu.date);
-                const cancelable = isReserved ? canCancel(menu.date) : true;
+                const isReserved = hasReservation(menu.id);
+                const canCancel = menu.menuDate ? canCancelReservation(menu.menuDate) : false;
+                const canMake = menu.menuDate ? canMakeReservationForMenu(menu.menuDate) : false;
+                const statusMessage = getReservationStatusMessage(menu);
+                const showButton = canMake || (isReserved && canCancel);
 
                 return (
                   <div
@@ -544,7 +487,6 @@ export default function MenulerPage() {
                     className={`p-6 ${isTodayMenu ? 'bg-blue-50' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-6">
-                      {/* Sol Taraf - Tarih ve Menü */}
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
                           <h3 className="text-lg font-semibold text-gray-900">
@@ -577,56 +519,47 @@ export default function MenulerPage() {
                             <span className="text-gray-500 text-xs">Kalori:</span>
                             <span className="text-gray-700 text-xs font-medium">{menu.calories} kcal</span>
                           </div>
+                          {statusMessage && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <p className={`text-xs ${
+                                isReserved 
+                                  ? (!canCancel ? 'text-gray-500' : 'text-green-600')
+                                  : (!canMake ? 'text-gray-500' : 'text-gray-600')
+                              }`}>
+                                {statusMessage}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      {/* Sağ Taraf - Rezervasyon Butonu - Sadece haftalık görünümde */}
-                      {viewMode === 'week' && canMakeReservation(menu.date) && (
+                      {showButton && (
                         <div className="flex-shrink-0">
-                          {(() => {
-                            const handleReservation = async () => {
+                          <button
+                            onClick={() => {
                               if (isReserved) {
-                                if (!canCancel(menu.date)) {
-                                  return;
-                                }
-                                try {
-                                  setReserving(menu.date);
-                                  setReservations(prev => prev.filter(d => d !== menu.date));
-                                  setReserving('');
-                                } catch (err) {
-                                  console.error('Rezervasyon iptal edilirken bir hata oluştu:', err);
-                                  setReserving('');
-                                }
+                                if (!canCancel) return;
+                                handleReservationClick(menu.id, 'cancel');
                               } else {
-                                try {
-                                  setReserving(menu.date);
-                                  setReservations(prev => [...prev, menu.date]);
-                                  setReserving('');
-                                } catch (err) {
-                                  console.error('Rezervasyon yapılırken bir hata oluştu:', err);
-                                  setReserving('');
-                                }
+                                if (!canMake) return;
+                                handleReservationClick(menu.id, 'create');
                               }
-                            };
-
-                            return (
-                              <button
-                                onClick={handleReservation}
-                                disabled={reserving === menu.date || (isReserved && !cancelable)}
-                                className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
-                                  isReserved
-                                    ? cancelable
-                                      ? 'bg-red-600 text-white hover:bg-red-700'
-                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                              >
-                                {reserving === menu.date ? 'İşleniyor...' : 
-                                 isReserved ? (cancelable ? 'İptal Et' : 'İptal Edilemez') : 
-                                 'Rezervasyon Yap'}
-                              </button>
-                            );
-                          })()}
+                            }}
+                            disabled={reserving === menu.id.toString() || (isReserved && !canCancel) || (!isReserved && !canMake)}
+                            className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm whitespace-nowrap ${
+                              isReserved
+                                ? canCancel
+                                  ? 'bg-red-600 text-white hover:bg-red-700'
+                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : canMake
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            {reserving === menu.id.toString() ? 'İşleniyor...' : 
+                             isReserved ? (canCancel ? 'İptal Et' : 'İptal Edilemez') : 
+                             'Rezervasyon Yap'}
+                          </button>
                         </div>
                       )}
                     </div>
@@ -636,10 +569,8 @@ export default function MenulerPage() {
             </div>
           )}
 
-          {/* Günlük Görünüm */}
           {viewMode === 'daily' && (
             <div className="space-y-6">
-              {/* Gün Seçici */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {selectedMenu.map((menu, index) => {
@@ -665,13 +596,15 @@ export default function MenulerPage() {
                 </div>
               </div>
 
-              {/* Seçili Günün Menüsü */}
               {selectedDate && (() => {
                 const menu = selectedMenu.find(m => m.date === selectedDate);
                 if (!menu) return null;
                 const isTodayMenu = isToday(menu.date);
-                const isReserved = reservations.includes(menu.date);
-                const cancelable = isReserved ? canCancel(menu.date) : true;
+                const isReserved = hasReservation(menu.id);
+                const canCancel = menu.menuDate ? canCancelReservation(menu.menuDate) : false;
+                const canMake = menu.menuDate ? canMakeReservationForMenu(menu.menuDate) : false;
+                const statusMessage = getReservationStatusMessage(menu);
+                const showButton = canMake || (isReserved && canCancel);
 
                 return (
                   <div className="bg-white rounded-lg shadow-sm border-2 border-blue-200 p-8">
@@ -687,7 +620,6 @@ export default function MenulerPage() {
                     </div>
 
                     <div className="space-y-6">
-                      {/* Menü Detayları */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                           <div className="border-b border-gray-200 pb-4">
@@ -733,53 +665,56 @@ export default function MenulerPage() {
                         </div>
                       </div>
 
-                      {/* Rezervasyon Butonu - Sadece haftalık görünümde */}
-                      {viewMode === 'week' && canMakeReservation(menu.date) && (
-                        <div className="pt-4 border-t border-gray-200">
-                          {(() => {
-                            const handleReservation = async () => {
-                              if (isReserved) {
-                                if (!canCancel(menu.date)) {
-                                  return;
+                      {viewMode === 'week' && (
+                        <div className="pt-4 border-t border-gray-200 space-y-3">
+                          {statusMessage && (
+                            <p className={`text-sm text-center ${
+                              isReserved 
+                                ? (!canCancel ? 'text-gray-500' : 'text-green-600')
+                                : (!canMake ? 'text-gray-500' : 'text-gray-600')
+                            }`}>
+                              {statusMessage}
+                            </p>
+                          )}
+                          
+                          {showButton && (
+                            <button
+                              onClick={() => {
+                                if (isReserved) {
+                                  if (!canCancel) return;
+                                  handleReservationClick(menu.id, 'cancel');
+                                } else {
+                                  if (!canMake) return;
+                                  handleReservationClick(menu.id, 'create');
                                 }
-                                try {
-                                  setReserving(menu.date);
-                                  setReservations(prev => prev.filter(d => d !== menu.date));
-                                  setReserving('');
-                                } catch (err) {
-                                  console.error('Rezervasyon iptal edilirken bir hata oluştu:', err);
-                                  setReserving('');
-                                }
-                              } else {
-                                try {
-                                  setReserving(menu.date);
-                                  setReservations(prev => [...prev, menu.date]);
-                                  setReserving('');
-                                } catch (err) {
-                                  console.error('Rezervasyon yapılırken bir hata oluştu:', err);
-                                  setReserving('');
-                                }
-                              }
-                            };
-
-                            return (
-                              <button
-                                onClick={handleReservation}
-                                disabled={reserving === menu.date || (isReserved && !cancelable)}
-                                className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
-                                  isReserved
-                                    ? cancelable
-                                      ? 'bg-red-600 text-white hover:bg-red-700'
-                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                              >
-                                {reserving === menu.date ? 'İşleniyor...' : 
-                                 isReserved ? (cancelable ? 'Rezervasyonu İptal Et' : 'İptal Edilemez') : 
-                                 'Rezervasyon Yap'}
-                              </button>
-                            );
-                          })()}
+                              }}
+                              disabled={reserving === menu.id.toString() || (isReserved && !canCancel) || (!isReserved && !canMake)}
+                              className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${
+                                isReserved
+                                  ? canCancel
+                                    ? 'bg-red-600 text-white hover:bg-red-700'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  : canMake
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                              {reserving === menu.id.toString() ? 'İşleniyor...' : 
+                               isReserved ? (canCancel ? 'Rezervasyonu İptal Et' : 'İptal Edilemez') : 
+                               'Rezervasyon Yap'}
+                            </button>
+                          )}
+                          
+                          {isReserved && !canCancel && (
+                            <p className="text-sm text-gray-500 text-center">
+                              İptal için son saat geçti
+                            </p>
+                          )}
+                          {!isReserved && !canMake && menu.menuDate && !isPastMenu(menu.menuDate) && (
+                            <p className="text-sm text-gray-500 text-center">
+                              Rezervasyon için son saat geçti
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
