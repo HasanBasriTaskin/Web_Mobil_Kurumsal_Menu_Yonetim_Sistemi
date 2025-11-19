@@ -4,6 +4,7 @@ using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Auth;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Notification;
 
 namespace CorporateMenuManagementSystem.API.Mappings
 {
@@ -42,6 +43,10 @@ namespace CorporateMenuManagementSystem.API.Mappings
 
             // User Mappings
             CreateMap<AppUser, AppUserDto>();
+
+            // Notification Mappings
+            CreateMap<Notification, NotificationDto>()
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedDate));
         }
     }
 }

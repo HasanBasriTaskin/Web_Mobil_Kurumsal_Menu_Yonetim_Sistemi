@@ -45,5 +45,21 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task MarkSpecificAsReadAsync(List<int> notificationIds, string userId)
+        {
+            var notifications = await _context.Notifications
+                .Where(n => n.AppUserId == userId && notificationIds.Contains(n.Id) && !n.IsRead)
+                .ToListAsync();
+
+            if (notifications.Any())
+            {
+                foreach (var notification in notifications)
+                {
+                    notification.IsRead = true;
+                }
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

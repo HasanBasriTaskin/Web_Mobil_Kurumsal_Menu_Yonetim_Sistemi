@@ -9,5 +9,6 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Abstract
         Task<List<Notification>> GetUserNotificationsAsync(string userId);
         Task<int> GetUserUnreadNotificationCountAsync(string userId);
         Task MarkAllAsReadAsync(string userId);
+        Task MarkSpecificAsReadAsync(List<int> notificationIds, string userId);
     }
 }
