@@ -322,10 +322,12 @@ export const notificationAPI = {
   },
 
   // POST /api/notifications/mark-read - Bildirimleri okundu olarak işaretle
-  markAsRead: async (notificationIds = null) => {
-    const response = await apiClient.post('/notifications/mark-read', {
-      notificationIds,
-    });
+  markAsRead: async (notificationId = null, markAllAsRead = false) => {
+    const body = markAllAsRead 
+      ? { markAllAsRead: true }
+      : { notificationId };
+    
+    const response = await apiClient.post('/notifications/mark-read', body);
     return response.data;
   },
 };

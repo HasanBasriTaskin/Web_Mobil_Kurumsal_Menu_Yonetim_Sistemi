@@ -227,21 +227,30 @@ export default function UserLayout({ children }) {
                     </button>
                   </div>
                   <div className="divide-y divide-gray-100">
-                    {notifications.length > 0 ? (
+                      {notifications.length > 0 ? (
                       notifications.map((notification) => (
                         <div
                           key={notification.id}
                           className={`p-4 hover:bg-gray-50 cursor-pointer ${
                             !notification.isRead ? 'bg-blue-50' : ''
                           }`}
-                          onClick={() => {
-                            // Bildirimi okundu olarak işaretle
-                            setNotifications(prev =>
-                              prev.map(n =>
-                                n.id === notification.id ? { ...n, isRead: true } : n
-                              )
-                            );
-                            setUnreadCount(prev => Math.max(0, prev - 1));
+                          onClick={async () => {
+                            // Sadece okunmamışları backend'e gönder
+                            if (!notification.isRead) {
+                              try {
+                                await notificationAPI.markAsRead(notification.id, false);
+                                
+                                // Local state'i güncelle
+                                setNotifications(prev =>
+                                  prev.map(n =>
+                                    n.id === notification.id ? { ...n, isRead: true } : n
+                                  )
+                                );
+                                setUnreadCount(prev => Math.max(0, prev - 1));
+                              } catch (err) {
+                                console.error('Bildirim okundu işaretlenemedi:', err);
+                              }
+                            }
                           }}
                         >
                           <p className="text-sm text-gray-900">{notification.message}</p>
