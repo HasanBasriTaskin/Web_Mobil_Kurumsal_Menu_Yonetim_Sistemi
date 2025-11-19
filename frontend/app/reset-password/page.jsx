@@ -30,18 +30,10 @@ function ResetPasswordForm() {
   useEffect(() => {
     const tokenParam = searchParams.get('token');
     if (tokenParam) {
-      // Backend'den URL-encoded gelen token'ı decode et
-      // Uri.EscapeDataString ile encode edilmiş, decodeURIComponent ile decode edilmeli
-      try {
-        const decodedToken = decodeURIComponent(tokenParam);
-        console.log('📝 Token from URL (encoded):', tokenParam);
-        console.log('📝 Token decoded:', decodedToken);
-        setToken(decodedToken);
-      } catch (err) {
-        console.error('Token decode error:', err);
-        // Eğer decode başarısız olursa, olduğu gibi kullan
-        setToken(tokenParam);
-      }
+      //Burası token'ının boşluklarını + ile değiştirir.
+      const fixedToken = tokenParam.replace(/ /g, '+');
+      
+      setToken(fixedToken);
     } else {
       setError('Şifre sıfırlama bağlantısı geçersiz. Lütfen e-postanızdaki bağlantıyı kullanın.');
     }
