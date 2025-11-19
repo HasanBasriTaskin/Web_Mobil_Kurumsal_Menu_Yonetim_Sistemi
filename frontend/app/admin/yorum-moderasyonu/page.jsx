@@ -4,7 +4,6 @@ import { useState } from 'react';
 
 export default function YorumModerasyonuPage() {
   const [viewMode, setViewMode] = useState('raw');
-  const [searchQuery, setSearchQuery] = useState('');
   const [filterPeriod, setFilterPeriod] = useState('7');
 
   const [allComments, setAllComments] = useState([
@@ -55,11 +54,6 @@ export default function YorumModerasyonuPage() {
   };
 
   const filteredComments = allComments
-    .filter(comment => {
-      const matchesSearch = comment.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           comment.employeeId.includes(searchQuery);
-      return matchesSearch;
-    })
     .sort((a, b) => {
       // Tarih sırasına göre sıralama (en yeni en üstte)
       const dateA = new Date(a.date + ' ' + a.time);
@@ -319,27 +313,15 @@ export default function YorumModerasyonuPage() {
         </div>
       </div>
 
-      {/* Search and Filter Bar - Only for Raw and Card View */}
+      {/* Filter Bar - Only for Raw and Card View */}
       {(viewMode === 'raw' || viewMode === 'card') && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex items-center gap-4">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Anahtar kelime ile ara"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-              <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
             <div className="relative">
               <select
                 value={filterPeriod}
                 onChange={(e) => setFilterPeriod(e.target.value)}
-                className="px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none bg-white"
+                className="px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none bg-white text-gray-900"
               >
                 <option value="7">Son 7 Gün</option>
                 <option value="30">Son 30 Gün</option>

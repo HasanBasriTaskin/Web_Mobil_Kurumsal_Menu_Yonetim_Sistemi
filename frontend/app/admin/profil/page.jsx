@@ -8,14 +8,6 @@ export default function ProfilPage() {
     email: 'admin@taskinnovation.com',
   });
 
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const handleProfileChange = (e) => {
@@ -26,45 +18,10 @@ export default function ProfilPage() {
     }));
   };
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    setPasswordError('');
-  };
-
   const handleProfileSubmit = (e) => {
     e.preventDefault();
     // Profil güncelleme işlemi burada yapılacak (API çağrısı)
     setSuccessMessage('Profil bilgileri başarıyla güncellendi');
-    setTimeout(() => setSuccessMessage(''), 5000);
-  };
-
-  const handlePasswordSubmit = (e) => {
-    e.preventDefault();
-    
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setPasswordError('Tüm alanları doldurunuz');
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordError('Yeni şifre en az 6 karakter olmalıdır');
-      return;
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError('Yeni şifreler eşleşmiyor');
-      return;
-    }
-
-    // Şifre değiştirme işlemi burada yapılacak (API çağrısı)
-    setPasswordError('');
-    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    setShowPasswordForm(false);
-    setSuccessMessage('Şifre başarıyla değiştirildi');
     setTimeout(() => setSuccessMessage(''), 5000);
   };
 
@@ -96,7 +53,7 @@ export default function ProfilPage() {
               name="fullName"
               value={profileInfo.fullName}
               onChange={handleProfileChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
               placeholder="Ad ve soyadınızı giriniz"
               required
             />
@@ -111,7 +68,7 @@ export default function ProfilPage() {
               name="email"
               value={profileInfo.email}
               onChange={handleProfileChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
               placeholder="E-posta adresinizi giriniz"
               required
             />
@@ -126,102 +83,6 @@ export default function ProfilPage() {
             </button>
           </div>
         </form>
-      </div>
-
-      {/* Şifre Değiştirme */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Şifre Değiştirme</h2>
-            <p className="text-sm text-gray-500 mt-1">Hesap güvenliğiniz için düzenli olarak şifrenizi güncelleyin</p>
-          </div>
-          <button
-            onClick={() => {
-              setShowPasswordForm(!showPasswordForm);
-              setPasswordError('');
-              setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-            }}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-          >
-            {showPasswordForm ? 'İptal' : 'Şifre Değiştir'}
-          </button>
-        </div>
-
-        {showPasswordForm && (
-          <form onSubmit={handlePasswordSubmit} className="space-y-4 border-t border-gray-200 pt-6">
-            {passwordError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-red-800 text-sm">{passwordError}</p>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Mevcut Şifre <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="password"
-                name="currentPassword"
-                value={passwordForm.currentPassword}
-                onChange={handlePasswordChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                placeholder="Mevcut şifrenizi giriniz"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Yeni Şifre <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="password"
-                name="newPassword"
-                value={passwordForm.newPassword}
-                onChange={handlePasswordChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                placeholder="Yeni şifrenizi giriniz (min. 6 karakter)"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">Şifre en az 6 karakter olmalıdır</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Yeni Şifre Tekrar <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={passwordForm.confirmPassword}
-                onChange={handlePasswordChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                placeholder="Yeni şifrenizi tekrar giriniz"
-                required
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPasswordForm(false);
-                  setPasswordError('');
-                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                İptal
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Şifreyi Güncelle
-              </button>
-            </div>
-          </form>
-        )}
       </div>
     </div>
   );

@@ -5,7 +5,6 @@ import apiClient from '@/services/api';
 
 export default function OylamaPage() {
   const [activeVotings, setActiveVotings] = useState([]);
-  const [pastVotings, setPastVotings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [voting, setVoting] = useState('');
@@ -20,11 +19,9 @@ export default function OylamaPage() {
       setLoading(true);
       setError('');
 
-      // API çağrıları yapılacak
+      // API çağrısı yapılacak
       // const activeResponse = await apiClient.get('/voting/active');
-      // const pastResponse = await apiClient.get('/voting/past');
       // setActiveVotings(activeResponse.data.data || []);
-      // setPastVotings(pastResponse.data.data || []);
 
       // localStorage'dan admin'in oluşturduğu anketleri al
       if (typeof window !== 'undefined') {
@@ -35,91 +32,24 @@ export default function OylamaPage() {
             
             // Aktif anketleri formatla (status: 'active')
             const active = allVotings
-              .filter(v => v.status === 'active')
+              .filter(v => v.status === 'active' && v.type === 'yesno')
               .map(v => {
-                if (v.type === 'meal') {
-                  // Yemek seçimi anketi
-                  const userVotedIds = v.userVotes || [];
-                  return {
-                    id: `vote_${v.id}`,
-                    type: 'meal',
-                    title: v.title,
-                    description: v.description || '',
-                    startDate: v.createdAt || new Date().toISOString().split('T')[0],
-                    endDate: v.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                    maxSelections: v.maxSelections || 3,
-                    options: (v.candidates || []).map((candidate, idx) => {
-                      const optId = `opt_${v.id}_${idx}`;
-                      return {
-                        id: optId,
-                        name: candidate.name || candidate,
-                        votes: 0,
-                        userVoted: userVotedIds.includes(optId)
-                      };
-                    }),
-                    totalVotes: 0,
-                    userCanVote: true
-                  };
-                } else if (v.type === 'yesno') {
-                  // Evet/Hayır anketi
-                  return {
-                    id: `vote_${v.id}`,
-                    type: 'yesno',
-                    title: v.title,
-                    description: v.description || '',
-                    startDate: v.createdAt || new Date().toISOString().split('T')[0],
-                    endDate: v.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                    yesCount: v.yesCount || 0,
-                    noCount: v.noCount || 0,
-                    userVoted: v.userVote || null,
-                    userCanVote: true
-                  };
-                }
-                return null;
-              })
-              .filter(Boolean);
-            
-            // Geçmiş anketleri formatla (status: 'closed')
-            const past = allVotings
-              .filter(v => v.status === 'closed')
-              .map(v => {
-                if (v.type === 'meal') {
-                  return {
-                    id: `vote_${v.id}`,
-                    type: 'meal',
-                    title: v.title,
-                    description: v.description || '',
-                    startDate: v.createdAt || new Date().toISOString().split('T')[0],
-                    endDate: v.endDate || new Date().toISOString().split('T')[0],
-                    options: (v.candidates || []).map((candidate, idx) => ({
-                      id: `opt_${v.id}_${idx}`,
-                      name: candidate.name || candidate,
-                      votes: 0,
-                      userVoted: false
-                    })),
-                    totalVotes: 0,
-                    userCanVote: false
-                  };
-                } else if (v.type === 'yesno') {
-                  return {
-                    id: `vote_${v.id}`,
-                    type: 'yesno',
-                    title: v.title,
-                    description: v.description || '',
-                    startDate: v.createdAt || new Date().toISOString().split('T')[0],
-                    endDate: v.endDate || new Date().toISOString().split('T')[0],
-                    yesCount: v.yesCount || 0,
-                    noCount: v.noCount || 0,
-                    userVoted: null,
-                    userCanVote: false
-                  };
-                }
-                return null;
-              })
-              .filter(Boolean);
+                // Evet/Hayır anketi
+                return {
+                  id: `vote_${v.id}`,
+                  type: 'yesno',
+                  title: v.title,
+                  description: v.description || '',
+                  startDate: v.createdAt || new Date().toISOString().split('T')[0],
+                  endDate: v.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                  yesCount: v.yesCount || 0,
+                  noCount: v.noCount || 0,
+                  userVoted: v.userVote || null,
+                  userCanVote: true
+                };
+              });
             
             setActiveVotings(active);
-            setPastVotings(past);
             setLoading(false);
             return;
           } catch (e) {
@@ -130,7 +60,6 @@ export default function OylamaPage() {
 
       // Eğer localStorage'da anket yoksa, boş liste göster
       setActiveVotings([]);
-      setPastVotings([]);
       setLoading(false);
     } catch (err) {
       setError('Oylamalar yüklenirken bir hata oluştu.');
@@ -153,41 +82,8 @@ export default function OylamaPage() {
       setActiveVotings(prev => {
         const updated = prev.map(voting => {
           if (voting.id === votingId) {
-            // Yemek seçimi anketi
-            if (voting.type === 'meal' && voting.options) {
-              const newOptions = voting.options.map(opt => {
-                if (opt.id === optionId) {
-                  // Aynı seçeneğe tıklandığında: eğer zaten oy verilmişse geri al, yoksa oy ver
-                  if (opt.userVoted) {
-                    return {
-                      ...opt,
-                      votes: Math.max(0, opt.votes - 1),
-                      userVoted: false
-                    };
-                  } else {
-                    // Maksimum seçim kontrolü
-                    const currentSelected = voting.options.filter(o => o.userVoted).length;
-                    if (voting.maxSelections && currentSelected >= voting.maxSelections) {
-                      return opt; // Maksimum seçime ulaşıldı
-                    }
-                    return {
-                      ...opt,
-                      votes: opt.votes + 1,
-                      userVoted: true
-                    };
-                  }
-                }
-                return opt;
-              });
-              return {
-                ...voting,
-                options: newOptions,
-                totalVotes: newOptions.reduce((sum, opt) => sum + opt.votes, 0),
-                userCanVote: true
-              };
-            }
             // Evet/Hayır anketi
-            else if (voting.type === 'yesno') {
+            if (voting.type === 'yesno') {
               const newVote = optionId === 'yes' ? 'yes' : 'no';
               const previousVote = voting.userVoted;
               
@@ -240,24 +136,13 @@ export default function OylamaPage() {
               const updatedAllVotings = allVotings.map(v => {
                 if (v.id === votingIdNum) {
                   const updatedVoting = updated.find(uv => uv.id === votingId);
-                  if (updatedVoting) {
-                    // User'ın oy verdiği bilgisini kaydet
-                    if (updatedVoting.type === 'meal') {
-                      // Yemek seçimi için oy verilen yemekleri kaydet
-                      return {
-                        ...v,
-                        userVotes: updatedVoting.options
-                          .filter(opt => opt.userVoted)
-                          .map(opt => opt.id)
-                      };
-                    } else if (updatedVoting.type === 'yesno') {
-                      return {
-                        ...v,
-                        userVote: updatedVoting.userVoted,
-                        yesCount: updatedVoting.yesCount,
-                        noCount: updatedVoting.noCount
-                      };
-                    }
+                  if (updatedVoting && updatedVoting.type === 'yesno') {
+                    return {
+                      ...v,
+                      userVote: updatedVoting.userVoted,
+                      yesCount: updatedVoting.yesCount,
+                      noCount: updatedVoting.noCount
+                    };
                   }
                 }
                 return v;
@@ -343,84 +228,6 @@ export default function OylamaPage() {
                     </div>
                   </div>
 
-                  {/* Yemek Seçimi Anketi */}
-                  {votingItem.type === 'meal' && (
-                    <>
-                      {/* Seçtiğiniz Yemekler */}
-                      <div className="space-y-3 mb-4">
-                        {votingItem.options && votingItem.options.filter(option => option.userVoted).length > 0 && (
-                          <>
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Seçtiğiniz Yemekler:</h4>
-                            {votingItem.options
-                              .filter(option => option.userVoted)
-                              .map((option) => {
-                                const isVotingThisOption = isVoting && voting.endsWith(option.id);
-                                return (
-                                  <div key={option.id} className="border border-blue-200 bg-blue-50 rounded-lg p-4">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3 flex-1">
-                                        <button
-                                          onClick={() => handleVote(votingItem.id, option.id)}
-                                          disabled={isVoting}
-                                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors bg-blue-600 border-blue-600 ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                        >
-                                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                          </svg>
-                                        </button>
-                                        <span className="font-medium text-gray-900">{option.name}</span>
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                          Seçtiniz
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                          </>
-                        )}
-                      </div>
-                      
-                      {/* Yeni Oy Vermek İçin Tüm Yemekler */}
-                      {votingItem.options && (
-                        <div className="mt-6 pt-6 border-t border-gray-200">
-                          <h4 className="text-sm font-medium text-gray-700 mb-3">
-                            {votingItem.maxSelections ? `Maksimum ${votingItem.maxSelections} yemek seçebilirsiniz:` : 'Yemek Seçiniz:'}
-                          </h4>
-                          <div className="space-y-2">
-                            {votingItem.options
-                              .filter(option => !option.userVoted)
-                              .map((option) => {
-                                const isVotingThisOption = isVoting && voting.endsWith(option.id);
-                                const currentSelected = votingItem.options.filter(o => o.userVoted).length;
-                                const canSelect = !votingItem.maxSelections || currentSelected < votingItem.maxSelections;
-                                
-                                return (
-                                  <div key={option.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                      <button
-                                        onClick={() => canSelect && handleVote(votingItem.id, option.id)}
-                                        disabled={isVoting || !canSelect}
-                                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors border-gray-300 hover:border-blue-500 ${isVoting || !canSelect ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                      >
-                                      </button>
-                                      <span className="font-medium text-gray-900">{option.name}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            {votingItem.options.filter(option => !option.userVoted).length === 0 && (
-                              <p className="text-sm text-gray-500 text-center py-2">Tüm seçeneklere oy verdiniz.</p>
-                            )}
-                            {votingItem.options.filter(option => option.userVoted).length === 0 && (
-                              <p className="text-sm text-gray-500 text-center py-2">Henüz oy vermediniz.</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
                   {/* Evet/Hayır Anketi */}
                   {votingItem.type === 'yesno' && (
                     <div className="space-y-3">
@@ -481,96 +288,8 @@ export default function OylamaPage() {
         </div>
       )}
 
-      {/* Geçmiş Oylamalar */}
-      {pastVotings.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Geçmiş Oylamalar</h2>
-          
-          <div className="space-y-6">
-            {pastVotings.map((votingItem) => (
-              <div key={votingItem.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 opacity-75">
-                <div className="mb-4 pb-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{votingItem.title}</h3>
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                        Tamamlandı
-                      </span>
-                      {votingItem.winner && (
-                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                          Kazanan: {votingItem.winner}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{votingItem.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span>Başlangıç: {formatDate(votingItem.startDate)}</span>
-                    <span>Bitiş: {formatDate(votingItem.endDate)}</span>
-                  </div>
-                </div>
-
-                {/* Sonuçlar */}
-                {votingItem.type === 'meal' && votingItem.options && (
-                  <div className="space-y-3">
-                    {votingItem.options
-                      .filter(option => option.userVoted)
-                      .map((option) => {
-                        return (
-                          <div key={option.id} className="border border-gray-200 rounded-lg p-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-900">{option.name}</span>
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                Seçtiniz
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    {votingItem.options.filter(option => option.userVoted).length === 0 && (
-                      <p className="text-sm text-gray-500 text-center py-4">Bu oylamada oy vermediniz.</p>
-                    )}
-                  </div>
-                )}
-                
-                {/* Evet/Hayır Anketi Sonuçları */}
-                {votingItem.type === 'yesno' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className={`border-2 rounded-lg p-4 ${
-                        votingItem.userVoted === 'yes'
-                          ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200 bg-gray-50'
-                      }`}>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Evet</p>
-                        {votingItem.userVoted === 'yes' && (
-                          <p className="text-xs text-green-600 mt-2">Seçtiniz</p>
-                        )}
-                      </div>
-                      <div className={`border-2 rounded-lg p-4 ${
-                        votingItem.userVoted === 'no'
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-200 bg-gray-50'
-                      }`}>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Hayır</p>
-                        {votingItem.userVoted === 'no' && (
-                          <p className="text-xs text-red-600 mt-2">Seçtiniz</p>
-                        )}
-                      </div>
-                    </div>
-                    {votingItem.userVoted === null && (
-                      <p className="text-sm text-gray-500 text-center py-2">Bu oylamada oy vermediniz.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Oylama Yok */}
-      {activeVotings.length === 0 && pastVotings.length === 0 && (
+      {activeVotings.length === 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
           <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />

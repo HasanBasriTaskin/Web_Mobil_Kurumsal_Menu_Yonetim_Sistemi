@@ -8,8 +8,7 @@ const weekDays = [
   'Çarşamba',
   'Perşembe',
   'Cuma',
-  'Cumartesi',
-  'Pazar'
+  'Cumartesi'
 ];
 
 const menuCategories = [
@@ -107,7 +106,7 @@ export default function MenuYonetimiPage() {
               setSelectedWeek(e.target.value);
               setErrorMessage(''); // Hafta seçildiğinde hata mesajını temizle
             }}
-            className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
           />
         </div>
 
@@ -127,7 +126,7 @@ export default function MenuYonetimiPage() {
                       value={menus[day]?.[category] || ''}
                       onChange={(e) => handleMenuChange(day, category, e.target.value)}
                       placeholder={`${category} giriniz`}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
                     />
                   </div>
                 ))}

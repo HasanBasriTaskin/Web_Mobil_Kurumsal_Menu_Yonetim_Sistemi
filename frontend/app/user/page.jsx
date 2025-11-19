@@ -72,14 +72,24 @@ export default function UserPage() {
 
       // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
       setTimeout(() => {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        
+        // Pazar günü (0) menü yok
+        if (dayOfWeek === 0) {
+          setTodayMenu(null);
+          setLoading(false);
+          return;
+        }
+        
         setTodayMenu({
-          date: new Date().toISOString().split('T')[0],
+          date: today.toISOString().split('T')[0],
           soup: 'Ezogelin Çorbası',
           mainCourse: 'Hünkar Beğendi',
           sideDish: 'Zeytinyağlı Enginar',
           dessert: 'Kazan Dibi',
-          calories: 1100,
-          allergens: ['Gluten', 'Süt']
+          beverage: 'Ayran',
+          calories: 1100
         });
         setLoading(false);
       }, 500);
@@ -103,10 +113,14 @@ export default function UserPage() {
   };
 
   // Bugün için rezervasyon yapılabilir mi kontrolü
-  // Bugün için rezervasyon önceki günün sonuna kadar yapılmalı (bugün 00:00'dan sonra yapılamaz)
+  // Yemek saatinden 1 saat öncesine kadar rezervasyon yapılabilir
   const canMakeReservationToday = () => {
-    // Bugün için rezervasyon yapılamaz, önceki günün sonuna kadar yapılmalı
-    return false;
+    const now = new Date();
+    const reservationDeadline = new Date();
+    reservationDeadline.setHours(10, 30, 0, 0); // Sabah 10:30 (yemek 11:30'da başlıyor, 1 saat öncesi)
+    
+    // Eğer şu an saat 10:30'u geçmediyse rezervasyon yapılabilir
+    return now < reservationDeadline;
   };
 
   // Rezervasyon yap
@@ -271,18 +285,29 @@ export default function UserPage() {
     e.preventDefault();
     
     if (!canSubmitFeedback()) {
-      alert('Puanlama yapabilmek için yemek saatini beklemeniz gerekmektedir (11:30).');
       return;
     }
 
     if (rating === 0) {
-      alert('Lütfen 1-5 arası bir puan seçiniz.');
       return;
     }
 
     try {
       setSubmittingFeedback(true);
       const today = new Date().toISOString().split('T')[0];
+      
+      // Kullanıcı bilgisini al
+      const storedUser = localStorage.getItem('user');
+      let userName = 'Kullanıcı';
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          userName = user.name || user.email?.split('@')[0] || 'Kullanıcı';
+        } catch (err) {
+          console.error('Kullanıcı bilgisi okunamadı:', err);
+        }
+      }
+      
       // API çağrısı
       // await apiClient.post('/feedback', {
       //   date: today,
@@ -290,14 +315,25 @@ export default function UserPage() {
       //   comment: comment
       // });
 
-      // Mock - başarılı
+      // Mock - başarılı - Yeni yorumu listeye ekle
+      const newComment = {
+        id: 'comment_' + Date.now(),
+        userName: userName,
+        comment: comment || '(Yorum yapılmadı)',
+        rating: rating,
+        likes: 0,
+        userLiked: false,
+        createdAt: new Date().toISOString()
+      };
+      
+      // Yeni yorumu listenin başına ekle
+      setComments([newComment, ...comments]);
+      
       setRating(0);
       setComment('');
       setSubmittingFeedback(false);
-      // Yorumlar listesini yeniden yükle
-      loadComments();
     } catch (err) {
-      alert('Puanlama gönderilirken bir hata oluştu.');
+      console.error('Puanlama gönderilirken bir hata oluştu:', err);
       setSubmittingFeedback(false);
     }
   };
@@ -412,7 +448,7 @@ export default function UserPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Günün Menüsü */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Günün Menüsü</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 underline">Günün Menüsü</h2>
           
           {todayMenu ? (
             <div className="space-y-4">
@@ -433,20 +469,24 @@ export default function UserPage() {
                   <span className="text-sm font-medium text-gray-600">Tatlı:</span>
                   <span className="text-gray-900 font-semibold">{todayMenu.dessert}</span>
                 </div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium text-gray-600">İçecek:</span>
+                  <span className="text-gray-900 font-semibold">{todayMenu.beverage}</span>
+                </div>
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
                   <span className="text-sm text-gray-500">Kalori:</span>
                   <span className="text-gray-700 font-medium">{todayMenu.calories} kcal</span>
                 </div>
-                {todayMenu.allergens && todayMenu.allergens.length > 0 && (
-                  <div className="mt-2">
-                    <span className="text-xs text-gray-500">Alerjenler: </span>
-                    <span className="text-xs text-red-600">{todayMenu.allergens.join(', ')}</span>
-                  </div>
-                )}
               </div>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">Bugün için menü bulunmamaktadır.</p>
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-2">
+                {new Date().getDay() === 0 
+                  ? 'Pazar günleri yemek servisi bulunmamaktadır.' 
+                  : 'Bugün için menü bulunmamaktadır.'}
+              </p>
+            </div>
           )}
         </div>
 
@@ -513,10 +553,7 @@ export default function UserPage() {
               ) : (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <p className="text-sm text-gray-600 text-center">
-                    Bugünün menüsü için rezervasyon yapılamaz. Rezervasyonlar önceki günün sonuna kadar (23:59:59) yapılmalıdır.
-                  </p>
-                  <p className="text-sm text-gray-600 text-center mt-2 font-medium">
-                    Yarın ve sonraki günler için rezervasyon yapmak için "Menüler" sayfasını kullanabilirsiniz.
+                    Bugünün menüsü için rezervasyon yapma süresi doldu. Rezervasyonlar yemek saatinden 1 saat öncesine kadar (10:30) yapılabilir.
                   </p>
                 </div>
               )}

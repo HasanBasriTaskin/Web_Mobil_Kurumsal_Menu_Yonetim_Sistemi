@@ -64,13 +64,14 @@ export default function MenulerPage() {
         const mockCurrentWeek = [];
         const mockNextWeek = [];
 
-        for (let i = 0; i < 7; i++) {
+        // Pazartesi'den Cumartesi'ye kadar (Pazar hariç - 6 gün)
+        for (let i = 0; i < 6; i++) {
           const date = new Date(monday);
           date.setDate(monday.getDate() + i);
           const dateStr = date.toISOString().split('T')[0];
           
           // 23 Kasım kontrolü
-          let soup = ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün', 'Lentil'][i];
+          let soup = ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün'][i];
           if (date.getDate() === 23 && date.getMonth() === 10) { // Kasım = 10 (0-indexed)
             soup = 'Yayla Çorbası'; // 23 Kasım için özel çorba
           }
@@ -78,9 +79,10 @@ export default function MenulerPage() {
           mockCurrentWeek.push({
             date: dateStr,
             soup: soup,
-            mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto'][i] || 'Yemek',
-            sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı'][i] || 'Yan Yemek',
-            dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani'][i] || 'Tatlı',
+            mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto', 'Tavuk Sote'][i] || 'Yemek',
+            sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı', 'Patates'][i] || 'Yan Yemek',
+            dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani', 'Keşkül'][i] || 'Tatlı',
+            beverage: ['Ayran', 'Meyve Suyu', 'Su', 'Komposto', 'Şalgam', 'Ayran'][i] || 'İçecek',
             calories: 1000 + Math.floor(Math.random() * 300)
           });
 
@@ -90,10 +92,11 @@ export default function MenulerPage() {
 
           mockNextWeek.push({
             date: nextDateStr,
-            soup: ['Domates', 'Yayla', 'Ezogelin', 'Mercimek', 'Tarhana', 'Düğün', 'Lentil'][i],
-            mainCourse: ['Tavuk Şinitzel', 'Kuru Fasulye', 'Hünkar Beğendi', 'Izgara Köfte', 'Rosto'][i] || 'Yemek',
-            sideDish: ['Bulgur', 'Pilav', 'Makarna', 'Salata', 'Zeytinyağlı'][i] || 'Yan Yemek',
-            dessert: ['Baklava', 'Kazan Dibi', 'Sütlaç', 'Tulumba', 'Revani'][i] || 'Tatlı',
+            soup: ['Domates', 'Yayla', 'Ezogelin', 'Mercimek', 'Tarhana', 'Düğün'][i],
+            mainCourse: ['Tavuk Şinitzel', 'Kuru Fasulye', 'Hünkar Beğendi', 'Izgara Köfte', 'Rosto', 'Sebze Güveç'][i] || 'Yemek',
+            sideDish: ['Bulgur', 'Pilav', 'Makarna', 'Salata', 'Zeytinyağlı', 'Patates'][i] || 'Yan Yemek',
+            dessert: ['Baklava', 'Kazan Dibi', 'Sütlaç', 'Tulumba', 'Revani', 'Muhallebi'][i] || 'Tatlı',
+            beverage: ['Komposto', 'Ayran', 'Meyve Suyu', 'Su', 'Şalgam', 'Ayran'][i] || 'İçecek',
             calories: 1000 + Math.floor(Math.random() * 300)
           });
         }
@@ -133,10 +136,26 @@ export default function MenulerPage() {
   };
 
   // Rezervasyon yapılabilir mi kontrolü
-  // Bugün için rezervasyon önceki günün sonuna kadar yapılmalı (bugün 00:00'dan sonra yapılamaz)
+  // Bugün için yemek saatinden 1 saat öncesine kadar, gelecek tarihler için her zaman yapılabilir
   const canMakeReservation = (dateStr) => {
+    const today = new Date().toISOString().split('T')[0];
+    
     // Gelecek tarihler için rezervasyon yapılabilir
-    return isFutureDate(dateStr);
+    if (isFutureDate(dateStr)) {
+      return true;
+    }
+    
+    // Bugün için yemek saatinden 1 saat öncesine kadar rezervasyon yapılabilir
+    if (dateStr === today) {
+      const now = new Date();
+      const reservationDeadline = new Date();
+      reservationDeadline.setHours(10, 30, 0, 0); // Sabah 10:30 (yemek 11:30'da başlıyor, 1 saat öncesi)
+      
+      return now < reservationDeadline;
+    }
+    
+    // Geçmiş tarihler için rezervasyon yapılamaz
+    return false;
   };
 
   // İptal edilebilir mi kontrol et (bugün için belirli saate kadar)
@@ -211,7 +230,7 @@ export default function MenulerPage() {
     setPendingReservation(null);
   };
 
-  const weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+  const weekDays = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
   const selectedMenu = selectedWeek === 'current' ? currentWeekMenu : nextWeekMenu;
   
   // Günlük görünüm için menü seç
@@ -408,6 +427,10 @@ export default function MenulerPage() {
                     <span className="text-gray-600">Tatlı:</span>
                     <span className="text-gray-900 font-medium">{menu.dessert}</span>
                   </div>
+                  <div className="flex justify-between border-b border-gray-100 pb-2">
+                    <span className="text-gray-600">İçecek:</span>
+                    <span className="text-gray-900 font-medium">{menu.beverage}</span>
+                  </div>
                   <div className="flex justify-between pt-2">
                     <span className="text-gray-500 text-xs">Kalori:</span>
                     <span className="text-gray-700 text-xs font-medium">{menu.calories} kcal</span>
@@ -505,6 +528,10 @@ export default function MenulerPage() {
                           <div className="flex items-center gap-2">
                             <span className="text-gray-600 w-24">Tatlı:</span>
                             <span className="text-gray-900 font-medium">{menu.dessert}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 w-24">İçecek:</span>
+                            <span className="text-gray-900 font-medium">{menu.beverage}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-gray-500 text-xs">Kalori:</span>

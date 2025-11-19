@@ -6,6 +6,7 @@ using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Auth;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Notification;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Profile;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
 
 namespace CorporateMenuManagementSystem.API.Mappings
 {
@@ -51,6 +52,12 @@ namespace CorporateMenuManagementSystem.API.Mappings
 
             // Profile Mappings
             CreateMap<AppUser, UserProfileDto>();
+
+            // Survey Mappings
+            CreateMap<CreateSurveyDto, Survey>();
+            CreateMap<Survey, SurveyDto>()
+                .ForMember(dest => dest.CreatedDate, opt => opt.MapFrom(src => src.CreatedDate))
+                .ForMember(dest => dest.HasUserResponded, opt => opt.Ignore()); // Bu alan business layer'da set edilecek
         }
     }
 }

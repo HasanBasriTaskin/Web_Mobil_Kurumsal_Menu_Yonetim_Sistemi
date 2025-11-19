@@ -15,6 +15,8 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder
         public DbSet<Reservation> Reservations { get; set; }
         public DbSet<Feedback> Feedbacks { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Survey> Surveys { get; set; }
+        public DbSet<SurveyResponse> SurveyResponses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -53,6 +55,20 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder
                 .HasMany(m => m.Feedbacks)
                 .WithOne(f => f.Menu)
                 .HasForeignKey(f => f.MenuId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Survey - SurveyResponse ilişkisi (Bir'e Çok)
+            builder.Entity<Survey>()
+                .HasMany(s => s.SurveyResponses)
+                .WithOne(sr => sr.Survey)
+                .HasForeignKey(sr => sr.SurveyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // AppUser - SurveyResponse ilişkisi (Bir'e Çok)
+            builder.Entity<AppUser>()
+                .HasMany<SurveyResponse>()
+                .WithOne(sr => sr.AppUser)
+                .HasForeignKey(sr => sr.AppUserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }
