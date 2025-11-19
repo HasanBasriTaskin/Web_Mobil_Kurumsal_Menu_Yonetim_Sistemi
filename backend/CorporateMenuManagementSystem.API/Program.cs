@@ -37,6 +37,8 @@ builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IAppUserRepository, AppUserRepository>();
+builder.Services.AddScoped<ISurveyRepository, SurveyRepository>();
+builder.Services.AddScoped<ISurveyResponseRepository, SurveyResponseRepository>();
 
 
 builder.Services.AddScoped<IMenuService, MenuManager>();
@@ -44,6 +46,8 @@ builder.Services.AddScoped<INotificationService, NotificationManager>();
 builder.Services.AddScoped<IFeedbackService, FeedbackManager>();
 builder.Services.AddScoped<IReservationService, ReservationManager>();
 builder.Services.AddScoped<IProfileService, ProfileManager>();
+builder.Services.AddScoped<ISurveyService, SurveyManager>();
+builder.Services.AddScoped<IAdminSurveyService, AdminSurveyManager>();
 
 
 // JWT Authentication Yapılandırması
