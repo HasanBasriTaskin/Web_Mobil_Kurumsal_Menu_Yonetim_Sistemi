@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import apiClient from '@/services/api';
+import { menuAPI, reservationAPI } from '@/services/api';
 
 export default function MenulerPage() {
   const [currentWeekMenu, setCurrentWeekMenu] = useState([]);
@@ -24,20 +24,21 @@ export default function MenulerPage() {
   // Rezervasyonları yükle
   const loadReservations = async () => {
     try {
-      // API çağrısı yapılacak
-      // const response = await apiClient.get('/reservations/me');
-      // const dates = response.data.data.map(r => r.date);
-      // setReservations(dates);
-
-      // Mock data - localStorage'dan yükle
-      const savedReservations = localStorage.getItem('user_reservations');
-      if (savedReservations) {
-        setReservations(JSON.parse(savedReservations));
+      const response = await reservationAPI.getMyReservations();
+      console.log('📋 Rezervasyonlar yükleniyor:', response);
+      
+      if (response.isSuccessful && response.data) {
+        // Rezervasyon tarihlerini çıkar
+        const dates = response.data.map(r => r.menuDate?.split('T')[0] || r.date);
+        console.log('✅ Rezerve edilmiş tarihler:', dates);
+        setReservations(dates);
       } else {
+        console.log('⚠️ Rezervasyon response başarısız veya data yok:', response);
         setReservations([]);
       }
     } catch (err) {
-      console.error('Rezervasyonlar yüklenemedi:', err);
+      console.error('❌ Rezervasyonlar yüklenemedi:', err);
+      setReservations([]);
     }
   };
 
@@ -47,64 +48,61 @@ export default function MenulerPage() {
       setLoading(true);
       setError('');
 
-      // API çağrıları yapılacak
-      // const currentResponse = await apiClient.get('/menu/weekly?week=current');
-      // const nextResponse = await apiClient.get('/menu/weekly?week=next');
-      // setCurrentWeekMenu(currentResponse.data.data || []);
-      // setNextWeekMenu(nextResponse.data.data || []);
-
-      // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
-      setTimeout(() => {
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Pazartesi'ye git
-        const monday = new Date(today);
-        monday.setDate(today.getDate() + diff);
-
-        const mockCurrentWeek = [];
-        const mockNextWeek = [];
-
-        // Pazartesi'den Cumartesi'ye kadar (Pazar hariç - 6 gün)
-        for (let i = 0; i < 6; i++) {
-          const date = new Date(monday);
-          date.setDate(monday.getDate() + i);
-          const dateStr = date.toISOString().split('T')[0];
-          
-          // 23 Kasım kontrolü
-          let soup = ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün'][i];
-          if (date.getDate() === 23 && date.getMonth() === 10) { // Kasım = 10 (0-indexed)
-            soup = 'Yayla Çorbası'; // 23 Kasım için özel çorba
-          }
-
-          mockCurrentWeek.push({
-            date: dateStr,
-            soup: soup,
-            mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto', 'Tavuk Sote'][i] || 'Yemek',
-            sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı', 'Patates'][i] || 'Yan Yemek',
-            dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani', 'Keşkül'][i] || 'Tatlı',
-            beverage: ['Ayran', 'Meyve Suyu', 'Su', 'Komposto', 'Şalgam', 'Ayran'][i] || 'İçecek',
-            calories: 1000 + Math.floor(Math.random() * 300)
+      const currentResponse = await menuAPI.getWeekly('current');
+      const nextResponse = await menuAPI.getWeekly('next');
+      
+      console.log('API Responses:', { currentResponse, nextResponse });
+      
+      if (currentResponse.isSuccessful && currentResponse.data) {
+        console.log('Current Response Data:', currentResponse.data);
+        
+        // Backend'den gelen verileri normalize et ve Pazar günü filtrele
+        const normalizedCurrent = currentResponse.data
+          .map(menu => {
+            const dateValue = menu.menuDate || menu.date;
+            return {
+              ...menu,
+              date: dateValue, // Kesin olarak date field'ını set et
+              menuDate: dateValue // menuDate'i de koru (geriye uyumluluk için)
+            };
+          })
+          .filter(menu => {
+            const menuDate = new Date(menu.date);
+            const isValid = !isNaN(menuDate.getTime());
+            const isSunday = menuDate.getDay() === 0;
+            return isValid && !isSunday; // Geçerli ve Pazar değilse
           });
-
-          const nextDate = new Date(date);
-          nextDate.setDate(date.getDate() + 7);
-          const nextDateStr = nextDate.toISOString().split('T')[0];
-
-          mockNextWeek.push({
-            date: nextDateStr,
-            soup: ['Domates', 'Yayla', 'Ezogelin', 'Mercimek', 'Tarhana', 'Düğün'][i],
-            mainCourse: ['Tavuk Şinitzel', 'Kuru Fasulye', 'Hünkar Beğendi', 'Izgara Köfte', 'Rosto', 'Sebze Güveç'][i] || 'Yemek',
-            sideDish: ['Bulgur', 'Pilav', 'Makarna', 'Salata', 'Zeytinyağlı', 'Patates'][i] || 'Yan Yemek',
-            dessert: ['Baklava', 'Kazan Dibi', 'Sütlaç', 'Tulumba', 'Revani', 'Muhallebi'][i] || 'Tatlı',
-            beverage: ['Komposto', 'Ayran', 'Meyve Suyu', 'Su', 'Şalgam', 'Ayran'][i] || 'İçecek',
-            calories: 1000 + Math.floor(Math.random() * 300)
+        console.log('✅ Normalized Current Week:', normalizedCurrent);
+        setCurrentWeekMenu(normalizedCurrent);
+      } else {
+        console.log('Current response failed or no data:', currentResponse);
+        setCurrentWeekMenu([]);
+      }
+      
+      if (nextResponse.isSuccessful && nextResponse.data) {
+        // Backend'den gelen verileri normalize et ve Pazar günü filtrele
+        const normalizedNext = nextResponse.data
+          .map(menu => {
+            const dateValue = menu.menuDate || menu.date;
+            return {
+              ...menu,
+              date: dateValue, // Kesin olarak date field'ını set et
+              menuDate: dateValue // menuDate'i de koru (geriye uyumluluk için)
+            };
+          })
+          .filter(menu => {
+            const menuDate = new Date(menu.date);
+            const isValid = !isNaN(menuDate.getTime());
+            const isSunday = menuDate.getDay() === 0;
+            return isValid && !isSunday; // Geçerli ve Pazar değilse
           });
-        }
+        console.log('✅ Normalized Next Week:', normalizedNext);
+        setNextWeekMenu(normalizedNext);
+      } else {
+        setNextWeekMenu([]);
+      }
 
-        setCurrentWeekMenu(mockCurrentWeek);
-        setNextWeekMenu(mockNextWeek);
-        setLoading(false);
-      }, 500);
+      setLoading(false);
     } catch (err) {
       setError('Menüler yüklenirken bir hata oluştu.');
       setLoading(false);
@@ -113,11 +111,24 @@ export default function MenulerPage() {
 
   // Tarihi Türkçe formatında göster
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
-                    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
+    if (!dateStr) return 'Tarih Belirtilmemiş';
+    
+    try {
+      const date = new Date(dateStr);
+      
+      // Invalid date kontrolü
+      if (isNaN(date.getTime())) {
+        return 'Geçersiz Tarih';
+      }
+      
+      const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+      const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
+                      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+      return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
+    } catch (err) {
+      console.error('Tarih formatlama hatası:', err, dateStr);
+      return 'Tarih Hatası';
+    }
   };
 
   // Bugün mü kontrolü
@@ -196,34 +207,71 @@ export default function MenulerPage() {
           return;
         }
         
-        // API çağrısı
-        // await apiClient.delete(`/reservations/${date}`);
+        // Date'den rezervasyon ID'sini bul
+        const response = await reservationAPI.getMyReservations();
+        if (response.isSuccessful && response.data) {
+          const reservation = response.data.find(r => 
+            (r.menuDate?.split('T')[0] || r.date) === date
+          );
+          
+          if (reservation && reservation.id) {
+            await reservationAPI.cancel(reservation.id);
+            await loadReservations(); // Rezervasyonları yeniden yükle
+          }
+        }
         
-        // Mock - iptal et
-        setReservations(prev => {
-          const updated = prev.filter(d => d !== date);
-          localStorage.setItem('user_reservations', JSON.stringify(updated));
-          // Custom event dispatch (aynı sayfa içi güncellemeler için)
-          window.dispatchEvent(new Event('reservationUpdated'));
-          return updated;
-        });
         setReserving('');
       } else {
-        // API çağrısı
-        // await apiClient.post('/reservations', { date });
+        // Date'den menü ID'sini bul
+        const menus = selectedWeek === 'current' ? currentWeekMenu : nextWeekMenu;
         
-        // Mock - rezervasyon yap
-        setReservations(prev => {
-          const updated = [...prev, date];
-          localStorage.setItem('user_reservations', JSON.stringify(updated));
-          // Custom event dispatch (aynı sayfa içi güncellemeler için)
-          window.dispatchEvent(new Event('reservationUpdated'));
-          return updated;
+        // Tarihi normalize et (saat bilgisi olmadan karşılaştır)
+        const normalizedTargetDate = date.split('T')[0];
+        
+        const menu = menus.find(m => {
+          // Backend'den gelen field menuDate olabilir
+          const menuFullDate = m.menuDate || m.date;
+          const menuDateStr = menuFullDate?.split('T')[0];
+          return menuDateStr === normalizedTargetDate;
         });
+        
+        if (menu && menu.id) {
+          console.log('✅ Rezervasyon yapılıyor:', {
+            menuId: menu.id,
+            menuDate: menu.menuDate || menu.date
+          });
+          await reservationAPI.create(menu.id);
+          await loadReservations(); // Rezervasyonları yeniden yükle
+        } else {
+          console.error('❌ Menü bulunamadı!', { 
+            arananTarih: normalizedTargetDate,
+            menuler: menus.map(m => ({ 
+              id: m.id, 
+              tarih: (m.menuDate || m.date)?.split('T')[0]
+            }))
+          });
+        }
+        
         setReserving('');
       }
     } catch (err) {
-      console.error('Rezervasyon işlemi sırasında bir hata oluştu:', err);
+      console.error('❌ Rezervasyon işlemi sırasında bir hata oluştu:', err);
+      
+      // 409 Conflict - Zaten rezervasyon var
+      if (err.response?.status === 409) {
+        console.warn('⚠️ Bu tarih için zaten rezervasyonunuz var!');
+        // Rezervasyonları yeniden yükle (muhtemelen zaten rezervasyon yapılmış)
+        await loadReservations();
+      } else if (err.response?.status === 400) {
+        console.error('❌ Geçersiz istek. Menü ID:', err.response?.data);
+      } else {
+        console.error('❌ Beklenmeyen hata:', {
+          status: err.response?.status,
+          message: err.response?.data?.message || err.message,
+          data: err.response?.data
+        });
+      }
+      
       setReserving('');
     }
     
@@ -389,11 +437,11 @@ export default function MenulerPage() {
           {/* Haftalık Görünüm */}
           {viewMode === 'week' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {selectedMenu.map((menu) => {
+          {selectedMenu.map((menu, index) => {
             const isTodayMenu = isToday(menu.date);
             return (
               <div
-                key={menu.date}
+                key={menu.id || menu.date || `menu-week-${index}`}
                 className={`bg-white rounded-lg shadow-sm border-2 p-6 ${
                   isTodayMenu ? 'border-blue-500' : 'border-gray-200'
                 }`}
@@ -426,10 +474,6 @@ export default function MenulerPage() {
                   <div className="flex justify-between border-b border-gray-100 pb-2">
                     <span className="text-gray-600">Tatlı:</span>
                     <span className="text-gray-900 font-medium">{menu.dessert}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-gray-100 pb-2">
-                    <span className="text-gray-600">İçecek:</span>
-                    <span className="text-gray-900 font-medium">{menu.beverage}</span>
                   </div>
                   <div className="flex justify-between pt-2">
                     <span className="text-gray-500 text-xs">Kalori:</span>
@@ -489,14 +533,14 @@ export default function MenulerPage() {
           {/* Liste Görünümü */}
           {viewMode === 'list' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 divide-y divide-gray-200">
-              {selectedMenu.map((menu) => {
+              {selectedMenu.map((menu, index) => {
                 const isTodayMenu = isToday(menu.date);
                 const isReserved = reservations.includes(menu.date);
                 const cancelable = isReserved ? canCancel(menu.date) : true;
 
                 return (
                   <div
-                    key={menu.date}
+                    key={menu.id || menu.date || `menu-list-${index}`}
                     className={`p-6 ${isTodayMenu ? 'bg-blue-50' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-6">
@@ -528,10 +572,6 @@ export default function MenulerPage() {
                           <div className="flex items-center gap-2">
                             <span className="text-gray-600 w-24">Tatlı:</span>
                             <span className="text-gray-900 font-medium">{menu.dessert}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-gray-600 w-24">İçecek:</span>
-                            <span className="text-gray-900 font-medium">{menu.beverage}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-gray-500 text-xs">Kalori:</span>
@@ -602,12 +642,12 @@ export default function MenulerPage() {
               {/* Gün Seçici */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <div className="flex gap-2 overflow-x-auto pb-2">
-                  {selectedMenu.map((menu) => {
+                  {selectedMenu.map((menu, index) => {
                     const isTodayMenu = isToday(menu.date);
                     const isSelected = selectedDate === menu.date;
                     return (
                       <button
-                        key={menu.date}
+                        key={menu.id || menu.date || `menu-daily-${index}`}
                         onClick={() => setSelectedDate(menu.date)}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                           isSelected

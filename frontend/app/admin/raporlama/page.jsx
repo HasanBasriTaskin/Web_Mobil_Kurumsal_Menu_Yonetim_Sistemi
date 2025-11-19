@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { feedbackAPI, menuAPI } from '@/services/api';
 
 // Örnek günlük menü değerlendirmeleri (gerçek uygulamada API'den gelecek)
 const menuData = [
@@ -63,8 +64,107 @@ const menuData = [
 ];
 
 export default function RaporlamaPage() {
+  const [menuData, setMenuData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filterWeek, setFilterWeek] = useState('all');
   const [sortBy, setSortBy] = useState('rating'); // 'rating' veya 'popularity'
+
+  useEffect(() => {
+    loadReportData();
+  }, []);
+
+  // Raporlama datasını yükle
+  const loadReportData = async () => {
+    try {
+      setLoading(true);
+      
+      // Backend'den tüm feedback'leri al
+      const feedbackResponse = await feedbackAPI.getAll();
+      console.log('Feedback response:', feedbackResponse);
+      
+      if (feedbackResponse.isSuccessful && feedbackResponse.data) {
+        console.log('Feedback data:', feedbackResponse.data);
+        // Feedback'leri menü ID'sine göre gruplayıp aggregate et
+        const menuMap = new Map();
+        
+        feedbackResponse.data.forEach(feedback => {
+          const menuId = feedback.menuId;
+          if (!menuMap.has(menuId)) {
+            menuMap.set(menuId, {
+              id: menuId,
+              date: feedback.menuDate || feedback.date || feedback.createdAt,
+              ratings: [],
+              items: feedback.menuItems || '',
+              menuDetails: null
+            });
+          }
+          
+          const menuData = menuMap.get(menuId);
+          if (feedback.rating) {
+            menuData.ratings.push(feedback.rating);
+          }
+        });
+        
+        // Aggregate edilmiş datayı hazırla
+        const aggregatedData = [];
+        
+        console.log('MenuMap:', Array.from(menuMap.values()));
+        
+        for (const menu of Array.from(menuMap.values())) {
+          if (menu.ratings.length === 0) continue; // Değerlendirme yoksa atla
+          
+          console.log('Menu date:', menu.date);
+          const dateObj = new Date(menu.date);
+          console.log('DateObj:', dateObj, 'isValid:', !isNaN(dateObj.getTime()));
+          const isValidDate = !isNaN(dateObj.getTime());
+          
+          aggregatedData.push({
+            id: menu.id,
+            date: isValidDate 
+              ? dateObj.toLocaleDateString('tr-TR', { 
+                  day: 'numeric', 
+                  month: 'long', 
+                  year: 'numeric',
+                  weekday: 'long'
+                })
+              : 'Tarih Belirtilmemiş',
+            averageRating: menu.ratings.length > 0 
+              ? (menu.ratings.reduce((a, b) => a + b, 0) / menu.ratings.length).toFixed(1)
+              : 0,
+            totalRatings: menu.ratings.length,
+            week: isValidDate ? getWeekNumber(dateObj) : 'Belirtilmemiş',
+            items: menu.items || 'Menü içeriği belirtilmemiş'
+          });
+        }
+        
+        setMenuData(aggregatedData);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Raporlama datası yükleme hatası:', err);
+      setMenuData([]);
+      setLoading(false);
+    }
+  };
+
+  // Tarihten hafta numarası hesapla
+  const getWeekNumber = (date) => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+    return `${Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7)}. Hafta`;
+  };
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Veriler yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Haftalara göre filtreleme
   const weeks = ['all', ...new Set(menuData.map(menu => menu.week))];
@@ -158,7 +258,7 @@ export default function RaporlamaPage() {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">En Sevilen Günün Menüleri</h2>
           <div className="space-y-4">
             {topMenus.map((menu, index) => (
-              <div key={menu.id} className="border border-gray-200 rounded-lg p-4">
+              <div key={`top-menu-${menu.id}-${index}`} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-start gap-3 flex-1">
                     <span className="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold mt-1">
@@ -175,14 +275,14 @@ export default function RaporlamaPage() {
                     </div>
                   </div>
                   <div className="text-right ml-3">
-                    <p className="text-lg font-bold text-green-600">{menu.averageRating.toFixed(1)}</p>
-                    <p className="text-xs text-gray-500">{menu.totalRatings} oy</p>
+                    <p className="text-lg font-bold text-green-600">{Number(menu.averageRating || 0).toFixed(1)}</p>
+                    <p className="text-xs text-gray-500">{menu.totalRatings || 0} oy</p>
                   </div>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-green-600 h-2 rounded-full"
-                    style={{ width: `${(menu.averageRating / 5) * 100}%` }}
+                    style={{ width: `${(Number(menu.averageRating || 0) / 5) * 100}%` }}
                   ></div>
                 </div>
               </div>
@@ -195,7 +295,7 @@ export default function RaporlamaPage() {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">En Sevilmeyen Günün Menüleri</h2>
           <div className="space-y-4">
             {bottomMenus.map((menu, index) => (
-              <div key={menu.id} className="border border-gray-200 rounded-lg p-4">
+              <div key={`bottom-menu-${menu.id}-${index}`} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-start gap-3 flex-1">
                     <span className="w-6 h-6 bg-red-100 text-red-700 rounded-full flex items-center justify-center text-xs font-bold mt-1">
@@ -212,14 +312,14 @@ export default function RaporlamaPage() {
                     </div>
                   </div>
                   <div className="text-right ml-3">
-                    <p className="text-lg font-bold text-red-600">{menu.averageRating.toFixed(1)}</p>
-                    <p className="text-xs text-gray-500">{menu.totalRatings} oy</p>
+                    <p className="text-lg font-bold text-red-600">{Number(menu.averageRating || 0).toFixed(1)}</p>
+                    <p className="text-xs text-gray-500">{menu.totalRatings || 0} oy</p>
                   </div>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-red-600 h-2 rounded-full"
-                    style={{ width: `${(menu.averageRating / 5) * 100}%` }}
+                    style={{ width: `${(Number(menu.averageRating || 0) / 5) * 100}%` }}
                   ></div>
                 </div>
               </div>
@@ -232,8 +332,8 @@ export default function RaporlamaPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-6">Tüm Günün Menüleri - Değerlendirme Puanları</h2>
         <div className="space-y-4">
-          {sortedMenus.map((menu) => (
-            <div key={menu.id} className="border border-gray-200 rounded-lg p-4">
+          {sortedMenus.map((menu, index) => (
+            <div key={`all-menu-${menu.id}-${index}`} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -251,19 +351,19 @@ export default function RaporlamaPage() {
                   <p className="text-sm text-gray-500">{menu.totalRatings} kullanıcı değerlendirmesi</p>
                 </div>
                 <div className="text-right ml-4">
-                  <p className="text-2xl font-bold text-gray-900">{menu.averageRating.toFixed(1)}</p>
+                  <p className="text-2xl font-bold text-gray-900">{Number(menu.averageRating || 0).toFixed(1)}</p>
                   <p className="text-xs text-gray-500">/ 5.0</p>
                 </div>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
                   className={`h-3 rounded-full ${
-                    menu.averageRating >= 4.5 ? 'bg-green-600' :
-                    menu.averageRating >= 4.0 ? 'bg-blue-600' :
-                    menu.averageRating >= 3.5 ? 'bg-yellow-600' :
+                    Number(menu.averageRating || 0) >= 4.5 ? 'bg-green-600' :
+                    Number(menu.averageRating || 0) >= 4.0 ? 'bg-blue-600' :
+                    Number(menu.averageRating || 0) >= 3.5 ? 'bg-yellow-600' :
                     'bg-red-600'
                   }`}
-                  style={{ width: `${(menu.averageRating / 5) * 100}%` }}
+                  style={{ width: `${(Number(menu.averageRating || 0) / 5) * 100}%` }}
                 ></div>
               </div>
             </div>

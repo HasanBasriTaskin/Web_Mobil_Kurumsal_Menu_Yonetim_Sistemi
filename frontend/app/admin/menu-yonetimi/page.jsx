@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { menuAPI } from '@/services/api';
 
 const weekDays = [
   'Pazartesi',
@@ -15,8 +16,7 @@ const menuCategories = [
   'Çorba',
   'Ana Yemek',
   'Salata',
-  'Tatlı',
-  'İçecek'
+  'Tatlı'
 ];
 
 export default function MenuYonetimiPage() {
@@ -35,33 +35,55 @@ export default function MenuYonetimiPage() {
     }));
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!selectedWeek) {
       setErrorMessage('Lütfen hafta seçiniz!');
-      setTimeout(() => setErrorMessage(''), 5000); // 5 saniye sonra otomatik kapanır
+      setTimeout(() => setErrorMessage(''), 5000);
       return;
     }
 
-    setErrorMessage(''); // Hata mesajını temizle
+    setErrorMessage('');
 
-    const weekMenus = weekDays.map(day => ({
-      day,
-      items: menuCategories.map(category => ({
-        category,
-        name: menus[day]?.[category] || ''
-      }))
-    }));
+    try {
+      // Seçilen haftanın başlangıç tarihini hesapla
+      const [startDateStr] = selectedWeek.split(' - ');
+      const [day, month, year] = startDateStr.split('.');
+      const startDate = new Date(year, month - 1, day);
 
-    const newPublishedMenu = {
-      id: Date.now(),
-      week: selectedWeek,
-      menus: weekMenus,
-      publishedAt: new Date().toLocaleDateString('tr-TR')
-    };
+      // Her gün için menü oluştur
+      const menuPromises = weekDays.map(async (dayName, index) => {
+        const menuDate = new Date(startDate);
+        menuDate.setDate(startDate.getDate() + index);
+        const dateStr = menuDate.toISOString().split('T')[0];
 
-    setPublishedMenus([newPublishedMenu, ...publishedMenus]);
-    setMenus({});
-    setSelectedWeek('');
+        // Menü datasını hazırla
+        const menuData = {
+          date: dateStr,
+          soup: menus[dayName]?.['Çorba'] || '',
+          mainCourse: menus[dayName]?.['Ana Yemek'] || '',
+          sideDish: menus[dayName]?.['Salata'] || '',
+          dessert: menus[dayName]?.['Tatlı'] || '',
+          calories: 0 // Backend'de hesaplanabilir
+        };
+
+        // API'ye gönder
+        const response = await menuAPI.create(menuData);
+        return response;
+      });
+
+      await Promise.all(menuPromises);
+
+      // Başarılı mesaj göster
+      alert('Menüler başarıyla yayınlandı!');
+      
+      // Formu temizle
+      setMenus({});
+      setSelectedWeek('');
+    } catch (err) {
+      console.error('Menü yayınlama hatası:', err);
+      setErrorMessage(err.response?.data?.message || 'Menüler yayınlanırken bir hata oluştu.');
+      setTimeout(() => setErrorMessage(''), 5000);
+    }
   };
 
   return (

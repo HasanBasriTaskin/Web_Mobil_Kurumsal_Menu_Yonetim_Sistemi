@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import apiClient from '@/services/api';
+import { menuAPI, reservationAPI, feedbackAPI } from '@/services/api';
 
 export default function UserPage() {
   const [todayMenu, setTodayMenu] = useState(null);
   const [reservationStatus, setReservationStatus] = useState(null);
+  const [reservationId, setReservationId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -25,27 +26,11 @@ export default function UserPage() {
   useEffect(() => {
     loadTodayMenu();
     loadReservationStatus();
-    loadComments();
     
     // Rezervasyon durumunu periyodik olarak kontrol et
     const interval = setInterval(() => {
       loadReservationStatus();
-    }, 1000); // Her saniye kontrol et
-    
-    // Storage event listener ekle (diğer sayfalardan güncelleme için)
-    const handleStorageChange = (e) => {
-      if (e.key === 'user_reservations') {
-        loadReservationStatus();
-      }
-    };
-    
-    // Custom event listener (aynı sayfa içi güncellemeler için)
-    const handleCustomStorageChange = () => {
-      loadReservationStatus();
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('reservationUpdated', handleCustomStorageChange);
+    }, 30000); // Her 30 saniyede kontrol et (API yükünü azaltmak için)
     
     // Sayfa focus olduğunda da kontrol et
     const handleFocus = () => {
@@ -56,22 +41,24 @@ export default function UserPage() {
     
     return () => {
       clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('reservationUpdated', handleCustomStorageChange);
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
+
+  // todayMenu yüklendiğinde yorumları yükle
+  useEffect(() => {
+    if (todayMenu) {
+      loadComments();
+    }
+  }, [todayMenu]);
 
   // Bugünün menüsünü yükle
   const loadTodayMenu = async () => {
     try {
       setLoading(true);
-      // API çağrısı yapılacak - şimdilik mock data
-      // const response = await apiClient.get('/menu/today');
-      // setTodayMenu(response.data.data);
-
-      // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
-      setTimeout(() => {
+      const response = await menuAPI.getToday();
+      
+      if (response.isSuccessful && response.data) {
         const today = new Date();
         const dayOfWeek = today.getDay();
         
@@ -82,33 +69,43 @@ export default function UserPage() {
           return;
         }
         
-        setTodayMenu({
-          date: today.toISOString().split('T')[0],
-          soup: 'Ezogelin Çorbası',
-          mainCourse: 'Hünkar Beğendi',
-          sideDish: 'Zeytinyağlı Enginar',
-          dessert: 'Kazan Dibi',
-          beverage: 'Ayran',
-          calories: 1100
-        });
+        setTodayMenu(response.data);
         setLoading(false);
-      }, 500);
+      } else {
+        // Menü yoksa null set et
+        setTodayMenu(null);
+        setLoading(false);
+      }
     } catch (err) {
-      setError('Menü yüklenirken bir hata oluştu.');
+      console.error('Menü yükleme hatası:', err);
+      // Hata durumunda da null set et (Pazar veya menü yok durumu)
+      setTodayMenu(null);
       setLoading(false);
     }
   };
 
   // Rezervasyon durumunu kontrol et
-  const loadReservationStatus = () => {
-    const today = new Date().toISOString().split('T')[0];
-    const savedReservations = localStorage.getItem('user_reservations');
-    if (savedReservations) {
-      const reservations = JSON.parse(savedReservations);
-      const hasReservation = reservations.includes(today);
-      setReservationStatus(hasReservation ? 'reserved' : 'not_reserved');
-    } else {
+  const loadReservationStatus = async () => {
+    try {
+      const response = await reservationAPI.getMyReservations();
+      if (response.isSuccessful && response.data) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayReservation = response.data.find(r => r.menuDate?.split('T')[0] === today || r.date === today);
+        if (todayReservation) {
+          setReservationStatus('reserved');
+          setReservationId(todayReservation.id);
+        } else {
+          setReservationStatus('not_reserved');
+          setReservationId(null);
+        }
+      } else {
+        setReservationStatus('not_reserved');
+        setReservationId(null);
+      }
+    } catch (err) {
+      console.error('Rezervasyon durumu yükleme hatası:', err);
       setReservationStatus('not_reserved');
+      setReservationId(null);
     }
   };
 
@@ -131,15 +128,20 @@ export default function UserPage() {
     }
 
     try {
-      const today = new Date().toISOString().split('T')[0];
-      // API çağrısı
-      // await apiClient.post('/reservations', { date: today });
+      if (!todayMenu || !todayMenu.id) {
+        console.error('Menü ID bulunamadı');
+        return;
+      }
       
-      // Mock - başarılı olarak işaretle
-      setReservationStatus('reserved');
+      const response = await reservationAPI.create(todayMenu.id);
+      
+      if (response.isSuccessful) {
+        setReservationStatus('reserved');
+        await loadReservationStatus();
+      }
     } catch (err) {
-      // Hata durumunda sessizce başarısız olur
       console.error('Rezervasyon yapılırken bir hata oluştu:', err);
+      setError('Rezervasyon yapılırken bir hata oluştu.');
     }
   };
 
@@ -173,23 +175,33 @@ export default function UserPage() {
     setShowCancelConfirm(false);
 
     try {
-      const today = new Date().toISOString().split('T')[0];
-      // API çağrısı
-      // await apiClient.delete(`/reservations/${today}`);
+      if (!reservationId) {
+        console.error('Rezervasyon ID bulunamadı');
+        return;
+      }
       
-      // Mock - iptal et
-      setReservationStatus('not_reserved');
-      setCancelMessage('Rezervasyonunuz iptal edildi.');
-      setShowCancelConfirm(true);
+      const response = await reservationAPI.cancel(reservationId);
       
-      // 2 saniye sonra mesajı kapat
-      setTimeout(() => {
-        setShowCancelConfirm(false);
-        setCancelMessage('');
-      }, 2000);
+      if (response.isSuccessful) {
+        setReservationStatus('not_reserved');
+        setReservationId(null);
+        await loadReservationStatus();
+        
+        // Başarı mesajı göster
+        setCancelMessage('Rezervasyonunuz iptal edildi.');
+        setShowCancelConfirm(true);
+        
+        // 2 saniye sonra mesajı kapat
+        setTimeout(() => {
+          setShowCancelConfirm(false);
+          setCancelMessage('');
+        }, 2000);
+      }
     } catch (err) {
+      console.error('Rezervasyon iptal edilirken bir hata oluştu:', err);
       // Backend'den hata gelirse (örn: saat geçmişse) göster
       const errorMessage = err.response?.data?.message || 'Rezervasyon iptal edilirken bir hata oluştu.';
+      setError(errorMessage);
       setCancelMessage(errorMessage);
       setShowCancelConfirm(true);
     }
@@ -211,44 +223,32 @@ export default function UserPage() {
   const loadComments = async () => {
     try {
       setLoadingComments(true);
-      const today = new Date().toISOString().split('T')[0];
-      // API çağrısı yapılacak
-      // const response = await apiClient.get(`/feedback/${today}`);
-      // setComments(response.data.data);
-
-      // Mock data
-      setTimeout(() => {
-        setComments([
-          {
-            id: 'comment_1',
-            userName: 'Ahmet Yılmaz',
-            comment: 'Çok lezzetli bir menüydü, özellikle çorba harikaydı!',
-            rating: 5,
-            likes: 12,
-            userLiked: false,
-            createdAt: '2025-01-10T12:30:00'
-          },
-          {
-            id: 'comment_2',
-            userName: 'Ayşe Demir',
-            comment: 'Ana yemek biraz tuzsuzdu ama genel olarak iyi.',
-            rating: 4,
-            likes: 8,
-            userLiked: true,
-            createdAt: '2025-01-10T13:15:00'
-          },
-          {
-            id: 'comment_3',
-            userName: 'Mehmet Kaya',
-            comment: 'Tatlı çok güzel olmuş, teşekkürler!',
-            rating: 5,
-            likes: 15,
-            userLiked: false,
-            createdAt: '2025-01-10T13:45:00'
-          }
-        ]);
+      
+      if (!todayMenu || !todayMenu.id) {
+        setComments([]);
         setLoadingComments(false);
-      }, 300);
+        return;
+      }
+      
+      const response = await feedbackAPI.getDaily(todayMenu.id);
+      
+      if (response.isSuccessful && response.data) {
+        // Backend'den gelen yorumları formatlayalım
+        const formattedComments = response.data.comments?.map(c => ({
+          id: c.id || c.feedbackId,
+          userName: c.userName || c.user?.name || 'Anonim',
+          comment: c.comment,
+          rating: c.rating,
+          likes: 0,
+          userLiked: false,
+          createdAt: c.createdAt
+        })) || [];
+        setComments(formattedComments);
+        setLoadingComments(false);
+      } else {
+        setComments([]);
+        setLoadingComments(false);
+      }
     } catch (err) {
       setLoadingComments(false);
       console.error('Yorumlar yüklenirken bir hata oluştu:', err);
@@ -294,46 +294,39 @@ export default function UserPage() {
 
     try {
       setSubmittingFeedback(true);
-      const today = new Date().toISOString().split('T')[0];
       
-      // Kullanıcı bilgisini al
-      const storedUser = localStorage.getItem('user');
-      let userName = 'Kullanıcı';
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          userName = user.name || user.email?.split('@')[0] || 'Kullanıcı';
-        } catch (err) {
-          console.error('Kullanıcı bilgisi okunamadı:', err);
-        }
+      if (!todayMenu || !todayMenu.id) {
+        console.error('Menü ID bulunamadı');
+        setSubmittingFeedback(false);
+        return;
       }
       
-      // API çağrısı
-      // await apiClient.post('/feedback', {
-      //   date: today,
-      //   rating: rating,
-      //   comment: comment
-      // });
-
-      // Mock - başarılı - Yeni yorumu listeye ekle
-      const newComment = {
-        id: 'comment_' + Date.now(),
-        userName: userName,
-        comment: comment || '(Yorum yapılmadı)',
-        rating: rating,
-        likes: 0,
-        userLiked: false,
-        createdAt: new Date().toISOString()
-      };
+      console.log('📝 Feedback gönderiliyor:', {
+        menuId: todayMenu.id,
+        rating,
+        commentLength: comment?.length || 0
+      });
       
-      // Yeni yorumu listenin başına ekle
-      setComments([newComment, ...comments]);
+      const response = await feedbackAPI.submit(todayMenu.id, rating, comment);
       
-      setRating(0);
-      setComment('');
+      if (response.isSuccessful) {
+        // Yorumları yeniden yükle
+        await loadComments();
+        
+        // Formu temizle
+        setRating(0);
+        setComment('');
+      }
+      
       setSubmittingFeedback(false);
     } catch (err) {
-      console.error('Puanlama gönderilirken bir hata oluştu:', err);
+      console.error('❌ Puanlama gönderilirken bir hata oluştu:', err);
+      console.error('❌ Hata detayları:', {
+        status: err.response?.status,
+        errors: err.response?.data?.errors,
+        message: err.response?.data?.message,
+        fullData: err.response?.data
+      });
       setSubmittingFeedback(false);
     }
   };
@@ -468,10 +461,6 @@ export default function UserPage() {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm font-medium text-gray-600">Tatlı:</span>
                   <span className="text-gray-900 font-semibold">{todayMenu.dessert}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-medium text-gray-600">İçecek:</span>
-                  <span className="text-gray-900 font-semibold">{todayMenu.beverage}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
                   <span className="text-sm text-gray-500">Kalori:</span>

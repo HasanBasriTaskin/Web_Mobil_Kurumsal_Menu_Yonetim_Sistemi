@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-const categories = ['Çorba', 'Ana Yemek', 'Salata', 'Tatlı', 'İçecek'];
+const categories = ['Çorba', 'Ana Yemek', 'Salata', 'Tatlı'];
 
 export default function YemekYonetimiPage() {
   const [meals, setMeals] = useState([]);

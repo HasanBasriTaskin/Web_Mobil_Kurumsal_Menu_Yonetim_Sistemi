@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { notificationAPI } from '@/services/api';
 
 const navigation = [
   { 
@@ -82,21 +83,25 @@ export default function UserLayout({ children }) {
   // Bildirimleri yükle
   const loadNotifications = async () => {
     try {
-      // API çağrısı yapılacak
-      // const response = await apiClient.get('/notifications');
-      // setNotifications(response.data.data || []);
-      // setUnreadCount(response.data.data.filter(n => !n.isRead).length);
-
-      // Mock data
-      const mockNotifications = [
-        { id: '1', message: 'Yeni menü eklendi!', isRead: false, createdAt: new Date().toISOString() },
-        { id: '2', message: 'Rezervasyonunuz onaylandı', isRead: false, createdAt: new Date().toISOString() },
-        { id: '3', message: 'Haftalık menü hazır', isRead: true, createdAt: new Date().toISOString() }
-      ];
-      setNotifications(mockNotifications);
-      setUnreadCount(mockNotifications.filter(n => !n.isRead).length);
+      const response = await notificationAPI.getAll();
+      
+      if (response.isSuccessful && response.data) {
+        const formattedNotifications = response.data.map(n => ({
+          id: n.id,
+          message: n.title || n.description || n.message,
+          isRead: n.isRead || false,
+          createdAt: n.createdAt
+        }));
+        setNotifications(formattedNotifications.slice(0, 5)); // Sadece ilk 5 tanesini göster
+        setUnreadCount(formattedNotifications.filter(n => !n.isRead).length);
+      } else {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
     } catch (err) {
       console.error('Bildirimler yüklenemedi:', err);
+      setNotifications([]);
+      setUnreadCount(0);
     }
   };
 

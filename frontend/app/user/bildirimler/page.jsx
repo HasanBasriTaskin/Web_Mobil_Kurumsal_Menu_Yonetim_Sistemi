@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import apiClient from '@/services/api';
+import { notificationAPI } from '@/services/api';
 
 export default function BildirimlerPage() {
   const [allNotifications, setAllNotifications] = useState([]); // Tüm bildirimler (state'te tutulacak)
@@ -24,6 +24,13 @@ export default function BildirimlerPage() {
 
   // Gösterilen bildirimleri güncelle (filtre + sayfalama)
   const updateDisplayedNotifications = () => {
+    console.log('Bildirimleri güncelleme:', {
+      filter,
+      currentPage,
+      allNotificationsCount: allNotifications.length,
+      allNotifications
+    });
+    
     // Filtreleme
     let filtered = allNotifications;
     if (filter === 'unread') {
@@ -32,10 +39,24 @@ export default function BildirimlerPage() {
       filtered = allNotifications.filter(n => n.isRead);
     }
 
+    console.log('Filtrelenmis bildirimler:', {
+      filterType: filter,
+      filteredCount: filtered.length,
+      filtered
+    });
+
     // Sayfalama
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const paginatedNotifications = filtered.slice(startIndex, endIndex);
+    
+    console.log('Sayfalanmis bildirimler:', {
+      page: currentPage,
+      pageSize,
+      startIndex,
+      endIndex,
+      paginatedCount: paginatedNotifications.length
+    });
     
     setNotifications(paginatedNotifications);
     setTotalPages(Math.ceil(filtered.length / pageSize));
@@ -56,14 +77,72 @@ export default function BildirimlerPage() {
       setLoading(true);
       setError('');
 
-      // API çağrısı yapılacak
-      // const response = await apiClient.get('/notifications');
-      // const data = response.data.data;
-      // setAllNotifications(data || []);
+      console.log('Bildirimler yukleniyor...');
+      const response = await notificationAPI.getAll();
+      console.log('API Response:', response);
+      
+      if (response.isSuccessful && response.data) {
+        console.log('Gelen bildirimler:', response.data);
+        // Backend'den gelen bildirimleri formatlayalım
+        const formattedNotifications = response.data.map(n => ({
+          id: n.id,
+          message: n.title || n.description || n.message,
+          isRead: n.isRead || false,
+          createdAt: n.createdAt,
+          type: n.type || 'general'
+        }));
+        console.log('Formatlanmis bildirimler:', formattedNotifications);
+        setAllNotifications(formattedNotifications);
+      } else {
+        console.warn('Bildirim response basarisiz veya data yok:', response);
+        setAllNotifications([]);
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Bildirimler yükleme hatası:', err);
+      setError('Bildirimler yüklenirken bir hata oluştu.');
+      setAllNotifications([]);
+      setLoading(false);
+    }
+  };
 
-      // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
+  // Tüm bildirimleri okundu olarak işaretle
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationAPI.markAsRead(null); // null = tümünü işaretle
+      // Local state'i güncelle
+      setAllNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error('Bildirimler okundu işaretlenirken hata oluştu:', err);
+    }
+  };
+
+  // Tek bir bildirimi okundu olarak işaretle
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      setMarkingAsRead(notificationId);
+      await notificationAPI.markAsRead([notificationId]);
+      // Local state'i güncelle
+      setAllNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId ? { ...n, isRead: true } : n
+        )
+      );
+      setMarkingAsRead('');
+    } catch (err) {
+      console.error('Bildirim okundu işaretlenirken hata oluştu:', err);
+      setMarkingAsRead('');
+    }
+  };
+
+  // ESKİ MOCK DATA - SİLİNECEK
+  const OLD_loadNotifications_MOCK = async () => {
+    try {
+      setLoading(true);
+      setError('');
       setTimeout(() => {
-        const mockNotifications = [
+        const mockNotifications_OLD = [
           {
             id: 'n_001',
             message: 'Yeni hafta (4-8 Kasım) menüsü yayınlandı.',
@@ -128,48 +207,6 @@ export default function BildirimlerPage() {
     } catch (err) {
       setError('Bildirimler yüklenirken bir hata oluştu.');
       setLoading(false);
-    }
-  };
-
-  // Tek bir bildirimi okundu işaretle
-  const handleMarkAsRead = async (notificationId) => {
-    try {
-      setMarkingAsRead(notificationId);
-      
-      // API çağrısı yapılacak
-      // await apiClient.post('/notifications/mark-read', { notificationId });
-
-      // Mock - okundu işaretle (tüm bildirimler state'ini güncelle)
-      setAllNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
-            ? { ...notif, isRead: true }
-            : notif
-        )
-      );
-      setMarkingAsRead('');
-    } catch (err) {
-      alert('Bildirim okundu işaretlenirken bir hata oluştu.');
-      setMarkingAsRead('');
-    }
-  };
-
-  // Tümünü okundu işaretle
-  const handleMarkAllAsRead = async () => {
-    try {
-      setMarkingAsRead('all');
-      
-      // API çağrısı yapılacak
-      // await apiClient.post('/notifications/mark-read', { markAllAsRead: true });
-
-      // Mock - tümünü okundu işaretle (tüm bildirimler state'ini güncelle, popup olmadan)
-      setAllNotifications(prev => 
-        prev.map(notif => ({ ...notif, isRead: true }))
-      );
-      setMarkingAsRead('');
-    } catch (err) {
-      alert('Bildirimler okundu işaretlenirken bir hata oluştu.');
-      setMarkingAsRead('');
     }
   };
 

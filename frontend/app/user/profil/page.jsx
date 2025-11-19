@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import apiClient from '@/services/api';
+import { profileAPI } from '@/services/api';
 
 export default function ProfilPage() {
   const [userInfo, setUserInfo] = useState({
@@ -24,35 +24,18 @@ export default function ProfilPage() {
       setLoading(true);
       setError('');
 
-      // API çağrısı yapılacak
-      // const response = await apiClient.get('/profile/me');
-      // setUserInfo(response.data.data);
-
-      // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
-      setTimeout(() => {
-        const storedUser = localStorage.getItem('user');
-        let mockUser = {
-          name: 'Kullanıcı',
-          email: 'user@company.com'
-        };
-
-        if (storedUser) {
-          try {
-            const user = JSON.parse(storedUser);
-            mockUser = {
-              ...mockUser,
-              name: user.name || user.email?.split('@')[0] || 'Kullanıcı',
-              email: user.email || 'user@company.com'
-            };
-          } catch (err) {
-            console.error('Kullanıcı bilgisi okunamadı:', err);
-          }
-        }
-
-        setUserInfo(mockUser);
-        setLoading(false);
-      }, 500);
+      const response = await profileAPI.getMe();
+      
+      if (response.isSuccessful && response.data) {
+        setUserInfo({
+          name: `${response.data.firstName || ''} ${response.data.lastName || ''}`.trim() || response.data.userName || response.data.email || '',
+          email: response.data.email || ''
+        });
+      }
+      
+      setLoading(false);
     } catch (err) {
+      console.error('Profil yükleme hatası:', err);
       setError('Profil bilgileri yüklenirken bir hata oluştu.');
       setLoading(false);
     }
@@ -67,19 +50,29 @@ export default function ProfilPage() {
       setError('');
       setSuccess('');
 
-      // API çağrısı yapılacak
-      // await apiClient.put('/profile/me', userInfo);
+      // İsmi ayır (firstName ve lastName)
+      const nameParts = userInfo.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-      // Mock - başarılı
-      setTimeout(() => {
+      const response = await profileAPI.update({
+        firstName,
+        lastName
+      });
+      
+      if (response.isSuccessful) {
         setSuccess('Profiliniz başarıyla güncellendi!');
-        setSaving(false);
         
         // Başarı mesajını 3 saniye sonra temizle
         setTimeout(() => setSuccess(''), 3000);
-      }, 500);
+      } else {
+        setError(response.message || 'Profil güncellenirken bir hata oluştu.');
+      }
+      
+      setSaving(false);
     } catch (err) {
-      setError('Profil güncellenirken bir hata oluştu.');
+      console.error('Profil güncelleme hatası:', err);
+      setError(err.response?.data?.message || 'Profil güncellenirken bir hata oluştu.');
       setSaving(false);
     }
   };
@@ -146,9 +139,8 @@ export default function ProfilPage() {
                 value={userInfo.name}
                 onChange={(e) => setUserInfo({ ...userInfo, name: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
-                readOnly
+                placeholder="Ad Soyad"
               />
-              <p className="mt-1 text-xs text-gray-500">Bu bilgi sistem yöneticisi tarafından yönetilmektedir.</p>
             </div>
 
             <div>

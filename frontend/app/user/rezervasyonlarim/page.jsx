@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import apiClient from '@/services/api';
+import { reservationAPI, menuAPI } from '@/services/api';
 
 export default function RezervasyonlarimPage() {
   const [reservations, setReservations] = useState([]);
@@ -23,82 +23,86 @@ export default function RezervasyonlarimPage() {
       setLoading(true);
       setError('');
 
-      // API çağrısı yapılacak
-      // const response = await apiClient.get('/reservations/me');
-      // const reservationsData = response.data.data || [];
-      // setReservations(reservationsData);
-
-      // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
-      setTimeout(() => {
-        const today = new Date();
-        const dayOfWeek = today.getDay(); // 0 = Pazar, 1 = Pazartesi, ...
-        // Pazartesi'ye git (hafta başı)
-        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-        const monday = new Date(today);
-        monday.setDate(today.getDate() + diff);
-        monday.setHours(0, 0, 0, 0);
+      const response = await reservationAPI.getMyReservations();
+      console.log('Backend rezervasyon response:', response);
+      
+      if (response.isSuccessful && response.data) {
+        console.log('Backend rezervasyon data:', response.data);
         
-        // localStorage'dan rezerve edilen tarihleri al
-        const savedReservations = localStorage.getItem('user_reservations');
-        const reservedDates = savedReservations ? JSON.parse(savedReservations) : [];
+        // Haftalık menüleri çek
+        const currentWeekResponse = await menuAPI.getWeekly('current');
+        const nextWeekResponse = await menuAPI.getWeekly('next');
         
-        const mockReservations = [];
-
-        // Hafta başından itibaren gelecek rezervasyonlar (Pazartesi'den başla, 7 gün)
-        for (let i = 0; i < 7; i++) {
-          const date = new Date(monday);
-          date.setDate(monday.getDate() + i);
-          const dateStr = date.toISOString().split('T')[0];
-          
-          // Sadece rezerve edilmiş ve gelecek tarihler için rezervasyon ekle
-          if (date >= today && reservedDates.includes(dateStr)) {
-            mockReservations.push({
-              reservationId: `r_${i}`,
-              userId: 'u_12345',
-              date: dateStr,
-              status: 'CONFIRMED',
-              reservedAt: new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000).toISOString(),
-              menu: {
-                soup: ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün', 'Lentil'][i % 7],
-                mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto', 'Adana Kebap', 'Lahmacun'][i % 7],
-                sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı', 'Patates', 'Sebze'][i % 7],
-                dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani', 'Trileçe', 'Künefe'][i % 7],
-                calories: 1000 + Math.floor(Math.random() * 300)
-              }
-            });
+        // Tüm menüleri birleştir ve tarihe göre map oluştur
+        const allMenus = [
+          ...(currentWeekResponse.isSuccessful && currentWeekResponse.data ? currentWeekResponse.data : []),
+          ...(nextWeekResponse.isSuccessful && nextWeekResponse.data ? nextWeekResponse.data : [])
+        ];
+        
+        const menuByDate = {};
+        allMenus.forEach(m => {
+          const menuDate = (m.menuDate || m.date)?.split('T')[0];
+          if (menuDate) {
+            menuByDate[menuDate] = m;
           }
-        }
-
-        // Geçmiş rezervasyonlar (bugünden önceki 7 gün)
-        for (let i = 1; i <= 3; i++) {
-          const date = new Date(today);
-          date.setDate(today.getDate() - i);
-          const dateStr = date.toISOString().split('T')[0];
-
-          mockReservations.push({
-            reservationId: `r_past_${i}`,
-            userId: 'u_12345',
-            date: dateStr,
-            status: 'COMPLETED',
-            reservedAt: new Date(Date.now() - (i + 7) * 24 * 60 * 60 * 1000).toISOString(),
-            menu: {
-              soup: ['Ezogelin', 'Mercimek', 'Domates'][i % 3],
-              mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel'][i % 3],
-              sideDish: ['Pilav', 'Makarna', 'Bulgur'][i % 3],
-              dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava'][i % 3],
-              calories: 1000 + Math.floor(Math.random() * 300)
-            }
+        });
+        
+        console.log('Menu by date:', menuByDate);
+        
+        const formattedReservations = response.data.map(r => {
+          console.log('Ham rezervasyon verisi:', r);
+          
+          // Tüm olası field'ları kontrol et
+          const resDate = r.date?.split?.('T')?.[0] || 
+                         r.menuDate?.split?.('T')?.[0] ||
+                         null;
+                         
+          const reservedTime = r.reservedAt || 
+                              r.createdAt || 
+                              r.created_at ||
+                              r.reservationDate ||
+                              null;
+          
+          console.log('Tarih bilgileri:', { 
+            'r.date': r.date,
+            'r.menuDate': r.menuDate,
+            'resDate': resDate,
+            'r.reservedAt': r.reservedAt,
+            'r.createdAt': r.createdAt,
+            'reservedTime': reservedTime
           });
-        }
-
-        // Tarihe göre sırala (gelecek önce, sonra geçmiş)
-        mockReservations.sort((a, b) => new Date(a.date) - new Date(b.date));
-        setReservations(mockReservations);
-        setLoading(false);
-      }, 500);
+          
+          const menu = menuByDate[resDate];
+          
+          return {
+            reservationId: r.reservationId || r.id,
+            userId: r.userId,
+            date: resDate,
+            status: r.status || 'CONFIRMED',
+            reservedAt: reservedTime,
+            menu: menu ? {
+              soup: menu.soup,
+              mainCourse: menu.mainCourse,
+              sideDish: menu.sideDish,
+              dessert: menu.dessert,
+              calories: menu.calories || 0
+            } : null
+          };
+        });
+        
+        // Tarihe göre sırala (yeni önce)
+        formattedReservations.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setReservations(formattedReservations);
+      } else {
+        setReservations([]);
+      }
+      
+      setLoading(false);
     } catch (err) {
+      console.error('Rezervasyonlar yuklenirken hata:', err);
       setError('Rezervasyonlar yüklenirken bir hata oluştu.');
       setLoading(false);
+      setReservations([]);
     }
   };
 
@@ -123,38 +127,36 @@ export default function RezervasyonlarimPage() {
       return;
     }
 
-    const dateToCancel = pendingCancel; // State'ten önce al
+    const dateToCancel = pendingCancel;
     setCancelling(dateToCancel);
     setShowCancelConfirm(false);
 
     try {
-      // API çağrısı yapılacak
-      // await apiClient.delete(`/reservations/${dateToCancel}`);
-
-      // localStorage'ı güncelle
-      const savedReservations = localStorage.getItem('user_reservations');
-      if (savedReservations) {
-        const reservations = JSON.parse(savedReservations);
-        const updatedReservations = reservations.filter(d => d !== dateToCancel);
-        localStorage.setItem('user_reservations', JSON.stringify(updatedReservations));
+      // Rezervasyon ID'sini bul
+      const reservation = reservations.find(r => r.date === dateToCancel);
+      
+      if (reservation && reservation.reservationId) {
+        await reservationAPI.cancel(reservation.reservationId);
+        
+        // Custom event dispatch (diğer sayfalardan güncelleme için)
+        window.dispatchEvent(new Event('reservationUpdated'));
+        
+        // Rezervasyonları yeniden yükle
+        await loadReservations();
+        
+        setCancelling('');
+        setPendingCancel(null);
+        setCancelMessage('Rezervasyonunuz iptal edildi.');
+        setShowCancelConfirm(true);
+        
+        // 2 saniye sonra mesajı kapat
+        setTimeout(() => {
+          setShowCancelConfirm(false);
+          setCancelMessage('');
+        }, 2000);
+      } else {
+        throw new Error('Rezervasyon bulunamadi');
       }
-      
-      // Custom event dispatch (diğer sayfalardan güncelleme için)
-      window.dispatchEvent(new Event('reservationUpdated'));
-      
-      // Rezervasyonu listeden kaldır
-      setReservations(prev => prev.filter(r => r.date !== dateToCancel));
-      
-      setCancelling('');
-      setPendingCancel(null);
-      setCancelMessage('Rezervasyonunuz iptal edildi.');
-      setShowCancelConfirm(true);
-      
-      // 2 saniye sonra mesajı kapat
-      setTimeout(() => {
-        setShowCancelConfirm(false);
-        setCancelMessage('');
-      }, 2000);
     } catch (err) {
       // Backend'den hata gelirse (örn: saat geçmişse) göster
       const errorMessage = err.response?.data?.message || 'Rezervasyon iptal edilirken bir hata oluştu.';
@@ -167,7 +169,18 @@ export default function RezervasyonlarimPage() {
 
   // Tarihi Türkçe formatında göster
   const formatDate = (dateStr) => {
+    if (!dateStr) {
+      console.error('formatDate: dateStr bos!', dateStr);
+      return 'Tarih Belirtilmemis';
+    }
+    
     const date = new Date(dateStr);
+    
+    if (isNaN(date.getTime())) {
+      console.error('formatDate: Gecersiz tarih!', dateStr, date);
+      return 'Gecersiz Tarih';
+    }
+    
     const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
     const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
                     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -176,7 +189,18 @@ export default function RezervasyonlarimPage() {
 
   // Rezervasyon zamanını formatla
   const formatReservedAt = (dateString) => {
+    if (!dateString) {
+      console.error('formatReservedAt: dateString bos!', dateString);
+      return 'Tarih Belirtilmemis';
+    }
+    
     const date = new Date(dateString);
+    
+    if (isNaN(date.getTime())) {
+      console.error('formatReservedAt: Gecersiz tarih!', dateString, date);
+      return 'Gecersiz Tarih';
+    }
+    
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     const day = date.getDate();
@@ -448,13 +472,6 @@ export default function RezervasyonlarimPage() {
                         <p className="text-sm text-yellow-700">Menü bilgisi bulunamadı</p>
                       </div>
                     )}
-
-                    {/* Rezervasyon Zamanı */}
-                    <div className="ml-12 mt-3">
-                      <p className="text-xs text-gray-500">
-                        Rezervasyon Tarihi: {formatReservedAt(reservation.reservedAt)}
-                      </p>
-                    </div>
                   </div>
 
                   {/* Sağ Taraf - İptal Butonu */}
