@@ -27,7 +27,7 @@ export default function MenulerPage() {
       const response = await reservationAPI.getMyReservations();
       console.log('📋 Rezervasyonlar yükleniyor:', response);
       
-      if (response.isSuccessful && response.data) {
+      if (response.success && response.data) {
         // Rezervasyon tarihlerini çıkar
         const dates = response.data.map(r => r.menuDate?.split('T')[0] || r.date);
         console.log('✅ Rezerve edilmiş tarihler:', dates);
@@ -53,7 +53,7 @@ export default function MenulerPage() {
       
       console.log('API Responses:', { currentResponse, nextResponse });
       
-      if (currentResponse.isSuccessful && currentResponse.data) {
+      if (currentResponse.success && currentResponse.data) {
         console.log('Current Response Data:', currentResponse.data);
         
         // Backend'den gelen verileri normalize et ve Pazar günü filtrele
@@ -79,7 +79,7 @@ export default function MenulerPage() {
         setCurrentWeekMenu([]);
       }
       
-      if (nextResponse.isSuccessful && nextResponse.data) {
+      if (nextResponse.success && nextResponse.data) {
         // Backend'den gelen verileri normalize et ve Pazar günü filtrele
         const normalizedNext = nextResponse.data
           .map(menu => {
@@ -209,7 +209,7 @@ export default function MenulerPage() {
         
         // Date'den rezervasyon ID'sini bul
         const response = await reservationAPI.getMyReservations();
-        if (response.isSuccessful && response.data) {
+        if (response.success && response.data) {
           const reservation = response.data.find(r => 
             (r.menuDate?.split('T')[0] || r.date) === date
           );

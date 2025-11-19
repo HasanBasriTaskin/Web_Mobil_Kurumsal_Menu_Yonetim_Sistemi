@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { notificationAPI } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 const navigation = [
   { 
@@ -55,28 +57,12 @@ const navigation = [
 
 export default function UserLayout({ children }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [userInfo, setUserInfo] = useState({ name: 'Kullanıcı', email: 'user@company.com' });
+  const { user, logout } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    // Kullanıcı bilgilerini localStorage'dan al
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          setUserInfo({
-            name: user.name || user.email?.split('@')[0] || 'Kullanıcı',
-            email: user.email || 'user@company.com'
-          });
-        } catch (error) {
-          console.error('Kullanıcı bilgisi okunamadı:', error);
-        }
-      }
-    }
     loadNotifications();
   }, []);
 
@@ -85,7 +71,7 @@ export default function UserLayout({ children }) {
     try {
       const response = await notificationAPI.getAll();
       
-      if (response.isSuccessful && response.data) {
+      if (response.success && response.data) {
         const formattedNotifications = response.data.map(n => ({
           id: n.id,
           message: n.title || n.description || n.message,
@@ -105,19 +91,6 @@ export default function UserLayout({ children }) {
     }
   };
 
-  const handleLogout = () => {
-    // Token'ı temizle (localStorage veya cookie'den)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Cookie'leri de temizle
-      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    }
-    // Login sayfasına yönlendir
-    router.push('/');
-  };
-
   // Kullanıcı adının baş harflerini al
   const getUserInitials = (name) => {
     if (!name) return 'KU';
@@ -128,7 +101,16 @@ export default function UserLayout({ children }) {
     return name.substring(0, 2).toUpperCase();
   };
 
+  // User info
+  const userInfo = {
+    name: user?.firstName && user?.lastName 
+      ? `${user.firstName} ${user.lastName}`
+      : user?.userName || user?.email?.split('@')[0] || 'Kullanıcı',
+    email: user?.email || 'user@company.com'
+  };
+
   return (
+    <ProtectedRoute requiredRole="User">
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
@@ -197,7 +179,7 @@ export default function UserLayout({ children }) {
             <span>Profil</span>
           </Link>
           <button 
-            onClick={handleLogout}
+            onClick={logout}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 w-full text-left"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,6 +280,7 @@ export default function UserLayout({ children }) {
         {children}
       </main>
     </div>
+    </ProtectedRoute>
   );
 }
 

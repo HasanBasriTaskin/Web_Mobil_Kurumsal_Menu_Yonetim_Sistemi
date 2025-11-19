@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { authAPI } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login, register, forgotPassword, isAuthenticated, user, loading } = useAuth();
   const [isLogin, setIsLogin] = useState(true); // true: login, false: register
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
@@ -21,23 +22,16 @@ export default function LoginPage() {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // JWT token'dan kullanıcı bilgilerini çıkar
-  const decodeToken = (token) => {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      return JSON.parse(jsonPayload);
-    } catch (error) {
-      console.error('Token decode error:', error);
-      return null;
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      if (user.role === 'Admin') {
+        router.push('/admin');
+      } else {
+        router.push('/user');
+      }
     }
-  };
+  }, [isAuthenticated, user, loading, router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -52,69 +46,15 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await authAPI.login(email, password);
-      
-      if (response.isSuccessful && response.data) {
-        // Token'ı al
-        const token = response.data.accessToken || response.data.token;
-        
-        if (token) {
-          // Token'ı kaydet
-          localStorage.setItem('token', token);
-          
-          // Token'dan kullanıcı bilgilerini çıkar
-          const decodedToken = decodeToken(token);
-          
-          if (decodedToken) {
-            // JWT token'dan email ve role bilgilerini al
-            const userEmail = decodedToken.email || decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || email;
-            const userRole = decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decodedToken.role || 'User';
-            const userId = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || decodedToken.sub || decodedToken.userId;
-            
-            // Kullanıcı bilgilerini kaydet
-            localStorage.setItem('user', JSON.stringify({
-              email: userEmail,
-              role: userRole,
-              id: userId,
-              username: decodedToken.sub || userEmail.split('@')[0],
-            }));
-            
-            // Role göre yönlendir
-            if (userRole === 'Admin' || userRole === 'admin') {
-              router.push('/admin');
-            } else {
-              router.push('/user');
-            }
-          } else {
-            // Token decode edilemezse, sadece email ile devam et
-            localStorage.setItem('user', JSON.stringify({
-              email: email,
-              role: 'User',
-            }));
-            router.push('/user');
-          }
-        } else {
-          setError('Giriş başarısız: Token alınamadı');
-          setIsLoading(false);
-        }
-      } else {
-        // Hata mesajını backend'den al
-        const errorMessage = response.errors?.[0]?.message || 
-                            response.errors?.[0]?.error || 
-                            response.message || 
-                            'Email veya şifre hatalı';
-        setError(errorMessage);
-        setIsLoading(false);
+      const result = await login(email, password);
+      // AuthContext handles success, just handle failure here
+      if (!result.success) {
+        setError(result.message || 'Giriş başarısız');
       }
     } catch (error) {
       console.error('Login error:', error);
-      // Backend'den gelen hata mesajını göster
-      const errorMessage = error.response?.data?.errors?.[0]?.message ||
-                          error.response?.data?.message ||
-                          error.response?.data?.title ||
-                          error.message ||
-                          'Giriş yapılırken bir hata oluştu';
-      setError(errorMessage);
+      setError('Giriş yapılırken bir hata oluştu');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -138,112 +78,15 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await authAPI.register(firstName, lastName, schoolEmail, registerPassword);
-      
-      if (response.isSuccessful) {
-        // Email'i kaydet (login formuna geçmeden önce)
-        const registeredEmail = schoolEmail;
-        
-        // Başarı mesajı göster
-        setSuccess('Hesabınız başarıyla oluşturuldu! Giriş yapabilirsiniz.');
-        setIsLoading(false);
-        
-        // Formu temizle
-        setFirstName('');
-        setLastName('');
-        setSchoolEmail('');
-        setRegisterPassword('');
-        
-        // 2 saniye sonra login formuna geç
-        setTimeout(() => {
-          setIsLogin(true);
-          setSuccess('');
-          // Email alanını doldur (kullanıcı kolaylığı için)
-          setEmail(registeredEmail);
-        }, 2000);
-      } else {
-        // Hata mesajını backend'den al
-        let errorMessage = 'Kayıt olurken bir hata oluştu';
-        
-        console.log('Register response (error):', response);
-        
-        if (response.errors) {
-          if (Array.isArray(response.errors)) {
-            // ErrorDetail formatındaki hatalar
-            const messages = response.errors
-              .map(err => err.message || err.error || err.field)
-              .filter(Boolean);
-            errorMessage = messages.length > 0 ? messages.join(', ') : errorMessage;
-          } else if (typeof response.errors === 'object') {
-            // Validation hataları (field bazlı)
-            const validationErrors = [];
-            Object.keys(response.errors).forEach(key => {
-              if (Array.isArray(response.errors[key])) {
-                response.errors[key].forEach(msg => {
-                  validationErrors.push(msg);
-                });
-              }
-            });
-            errorMessage = validationErrors.length > 0 ? validationErrors.join(', ') : errorMessage;
-          }
-        } else if (response.message) {
-          errorMessage = response.message;
-        }
-        
-        setError(errorMessage);
-        setIsLoading(false);
+      const result = await register(firstName, lastName, schoolEmail, registerPassword);
+      // AuthContext handles success and redirection
+      if (!result.success) {
+        setError(result.message || 'Kayıt başarısız');
       }
     } catch (error) {
       console.error('Register error:', error);
-      console.error('Error response:', error.response);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error response status:', error.response?.status);
-      
-      // Network hatası kontrolü
-      if (!error.response) {
-        setError('Backend\'e bağlanılamadı. Backend çalışıyor mu kontrol edin (http://localhost:5000)');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Response data'yı al (bazen data direkt response'da olabilir)
-      const responseData = error.response?.data || error.response || {};
-      
-      // Backend validation hatalarını topla
-      if (responseData.errors) {
-        let errorMessage = 'Kayıt olurken bir hata oluştu';
-        
-        if (Array.isArray(responseData.errors)) {
-          // ErrorDetail formatındaki hatalar
-          const messages = responseData.errors
-            .map(err => err.message || err.error || err.field)
-            .filter(Boolean);
-          errorMessage = messages.length > 0 ? messages.join(', ') : errorMessage;
-        } else if (typeof responseData.errors === 'object') {
-          // Validation hataları (field bazlı)
-          const validationErrors = [];
-          Object.keys(responseData.errors).forEach(key => {
-            if (Array.isArray(responseData.errors[key])) {
-              responseData.errors[key].forEach(msg => {
-                validationErrors.push(msg);
-              });
-            }
-          });
-          errorMessage = validationErrors.length > 0 ? validationErrors.join(', ') : errorMessage;
-        }
-        
-        setError(errorMessage);
-      } else if (responseData.message) {
-        setError(responseData.message);
-      } else if (responseData.title) {
-        setError(responseData.title);
-      } else {
-        // Genel hata mesajı
-        const statusText = error.response?.statusText || '';
-        const status = error.response?.status || 'Unknown';
-        setError(`Kayıt olurken bir hata oluştu (${status} ${statusText})`);
-      }
-      
+      setError('Kayıt olurken bir hata oluştu');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -261,12 +104,10 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await authAPI.forgotPassword(forgotPasswordEmail);
-      
-      if (response.isSuccessful) {
+      const result = await forgotPassword(forgotPasswordEmail);
+      if (result.success) {
         setSuccess('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.');
         setForgotPasswordEmail('');
-        setIsLoading(false);
         
         // 3 saniye sonra login formuna dön
         setTimeout(() => {
@@ -274,12 +115,12 @@ export default function LoginPage() {
           setSuccess('');
         }, 3000);
       } else {
-        setError(response.message || response.error || 'Bir hata oluştu');
-        setIsLoading(false);
+        setError(result.message || 'Bir hata oluştu');
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      setError(error.response?.data?.message || error.message || 'Bir hata oluştu');
+      setError('Bir hata oluştu');
+    } finally {
       setIsLoading(false);
     }
   };

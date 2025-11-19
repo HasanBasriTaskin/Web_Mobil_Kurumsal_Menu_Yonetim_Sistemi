@@ -26,7 +26,7 @@ export default function RezervasyonlarimPage() {
       const response = await reservationAPI.getMyReservations();
       console.log('Backend rezervasyon response:', response);
       
-      if (response.isSuccessful && response.data) {
+      if (response.success && response.data) {
         console.log('Backend rezervasyon data:', response.data);
         
         // Haftalık menüleri çek
@@ -35,8 +35,8 @@ export default function RezervasyonlarimPage() {
         
         // Tüm menüleri birleştir ve tarihe göre map oluştur
         const allMenus = [
-          ...(currentWeekResponse.isSuccessful && currentWeekResponse.data ? currentWeekResponse.data : []),
-          ...(nextWeekResponse.isSuccessful && nextWeekResponse.data ? nextWeekResponse.data : [])
+          ...(currentWeekResponse.success && currentWeekResponse.data ? currentWeekResponse.data : []),
+          ...(nextWeekResponse.success && nextWeekResponse.data ? nextWeekResponse.data : [])
         ];
         
         const menuByDate = {};

@@ -58,7 +58,7 @@ export default function UserPage() {
       setLoading(true);
       const response = await menuAPI.getToday();
       
-      if (response.isSuccessful && response.data) {
+      if (response.success && response.data) {
         const today = new Date();
         const dayOfWeek = today.getDay();
         
@@ -88,7 +88,7 @@ export default function UserPage() {
   const loadReservationStatus = async () => {
     try {
       const response = await reservationAPI.getMyReservations();
-      if (response.isSuccessful && response.data) {
+      if (response.success && response.data) {
         const today = new Date().toISOString().split('T')[0];
         const todayReservation = response.data.find(r => r.menuDate?.split('T')[0] === today || r.date === today);
         if (todayReservation) {
@@ -135,7 +135,7 @@ export default function UserPage() {
       
       const response = await reservationAPI.create(todayMenu.id);
       
-      if (response.isSuccessful) {
+      if (response.success) {
         setReservationStatus('reserved');
         await loadReservationStatus();
       }
@@ -182,7 +182,7 @@ export default function UserPage() {
       
       const response = await reservationAPI.cancel(reservationId);
       
-      if (response.isSuccessful) {
+      if (response.success) {
         setReservationStatus('not_reserved');
         setReservationId(null);
         await loadReservationStatus();
@@ -232,7 +232,7 @@ export default function UserPage() {
       
       const response = await feedbackAPI.getDaily(todayMenu.id);
       
-      if (response.isSuccessful && response.data) {
+      if (response.success && response.data) {
         // Backend'den gelen yorumları formatlayalım
         const formattedComments = response.data.comments?.map(c => ({
           id: c.id || c.feedbackId,
@@ -309,7 +309,7 @@ export default function UserPage() {
       
       const response = await feedbackAPI.submit(todayMenu.id, rating, comment);
       
-      if (response.isSuccessful) {
+      if (response.success) {
         // Yorumları yeniden yükle
         await loadComments();
         
