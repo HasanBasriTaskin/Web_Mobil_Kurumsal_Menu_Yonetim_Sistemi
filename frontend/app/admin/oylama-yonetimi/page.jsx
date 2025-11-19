@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // Mevcut yemekler (gerçek uygulamada API'den gelecek)
 const availableMeals = [
@@ -27,29 +27,57 @@ export default function OylamaYonetimiPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   
-  // Mevcut anketler listesi
-  const [votings, setVotings] = useState([
-    {
-      id: 1,
-      type: 'meal',
-      title: 'Gelecek ay görmek istediğiniz 3 yemek',
-      description: 'Aşağıdaki yemeklerden 3 tanesini seçiniz',
-      status: 'active',
-      candidates: [],
-      maxSelections: 3,
-      createdAt: '2024-11-15'
-    },
-    {
-      id: 2,
-      type: 'yesno',
-      title: 'Mevcut salata barından memnun musunuz?',
-      description: 'Salata bar hizmeti hakkında görüşlerinizi paylaşın',
-      status: 'draft',
-      yesCount: 0,
-      noCount: 0,
-      createdAt: '2024-11-16'
+  // Mevcut anketler listesi - localStorage'dan yükle
+  const [votings, setVotings] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedVotings = localStorage.getItem('votings');
+      if (savedVotings) {
+        try {
+          return JSON.parse(savedVotings);
+        } catch (e) {
+          console.error('Error parsing votings from localStorage:', e);
+        }
+      }
     }
-  ]);
+    // Varsayılan anketler
+    return [
+      {
+        id: 1,
+        type: 'meal',
+        title: 'Gelecek Ay (Aralık) Yemek Oylaması',
+        description: 'Gelecek ayın menüsünde hangi yemekleri görmek istersiniz?',
+        status: 'active',
+        candidates: [],
+        maxSelections: 3,
+        createdAt: '2024-11-15'
+      },
+      {
+        id: 2,
+        type: 'yesno',
+        title: 'Mevcut salata barından memnun musunuz?',
+        description: 'Salata bar hizmeti hakkında görüşlerinizi paylaşın',
+        status: 'draft',
+        yesCount: 0,
+        noCount: 0,
+        createdAt: '2024-11-16'
+      }
+    ];
+  });
+
+  // localStorage'dan anketleri yükle
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedVotings = localStorage.getItem('votings');
+      if (savedVotings) {
+        try {
+          const parsed = JSON.parse(savedVotings);
+          setVotings(parsed);
+        } catch (e) {
+          console.error('Error parsing votings from localStorage:', e);
+        }
+      }
+    }
+  }, []);
 
   const handleAddCandidate = () => {
     if (!selectedMealId) {
@@ -102,7 +130,14 @@ export default function OylamaYonetimiPage() {
       createdAt: new Date().toISOString().split('T')[0]
     };
 
-    setVotings([...votings, newVoting]);
+    const updatedVotings = [...votings, newVoting];
+    setVotings(updatedVotings);
+    
+    // localStorage'a kaydet
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('votings', JSON.stringify(updatedVotings));
+    }
+    
     setSuccessMessage('Anket başarıyla oluşturuldu!');
     setTimeout(() => setSuccessMessage(''), 5000);
     
@@ -117,19 +152,37 @@ export default function OylamaYonetimiPage() {
   };
 
   const handleStartVoting = (votingId) => {
-    setVotings(votings.map(v => 
+    const updatedVotings = votings.map(v => 
       v.id === votingId ? { ...v, status: 'active' } : v
-    ));
+    );
+    setVotings(updatedVotings);
+    
+    // localStorage'a kaydet
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('votings', JSON.stringify(updatedVotings));
+    }
   };
 
   const handleEndVoting = (votingId) => {
-    setVotings(votings.map(v => 
+    const updatedVotings = votings.map(v => 
       v.id === votingId ? { ...v, status: 'closed' } : v
-    ));
+    );
+    setVotings(updatedVotings);
+    
+    // localStorage'a kaydet
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('votings', JSON.stringify(updatedVotings));
+    }
   };
 
   const handleDeleteVoting = (votingId) => {
-    setVotings(votings.filter(v => v.id !== votingId));
+    const updatedVotings = votings.filter(v => v.id !== votingId);
+    setVotings(updatedVotings);
+    
+    // localStorage'a kaydet
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('votings', JSON.stringify(updatedVotings));
+    }
   };
 
   // Seçilebilir yemekler (zaten aday olmayanlar)
@@ -208,7 +261,7 @@ export default function OylamaYonetimiPage() {
                   }`}
                 >
                   <div className="font-semibold text-gray-900 mb-1">Yemek Seçimi</div>
-                  <div className="text-sm text-gray-500">Kullanıcılar yemek seçebilir (örn: Gelecek ay görmek istediğiniz 3 yemek)</div>
+                  <div className="text-sm text-gray-500">Kullanıcılar yemek seçebilir (örn: Gelecek Ay (Aralık) Yemek Oylaması)</div>
                 </button>
                 <button
                   onClick={() => {
@@ -236,7 +289,7 @@ export default function OylamaYonetimiPage() {
                 type="text"
                 value={votingTitle}
                 onChange={(e) => setVotingTitle(e.target.value)}
-                placeholder={votingType === 'meal' ? 'Örn: Gelecek ay görmek istediğiniz 3 yemek' : 'Örn: Mevcut salata barından memnun musunuz?'}
+                placeholder={votingType === 'meal' ? 'Örn: Gelecek Ay (Aralık) Yemek Oylaması' : 'Örn: Mevcut salata barından memnun musunuz?'}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
               />
             </div>

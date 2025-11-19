@@ -18,6 +18,15 @@ apiClient.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      // Debug: Token'ın varlığını kontrol et
+      console.log('API Request:', {
+        url: config.url,
+        method: config.method,
+        hasToken: !!token,
+        tokenPreview: token ? token.substring(0, 20) + '...' : 'No token'
+      });
+    } else {
+      console.warn('API Request without token:', config.url);
     }
     return config;
   },
@@ -28,8 +37,40 @@ apiClient.interceptors.request.use(
 
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Başarılı response'ları olduğu gibi döndür
+    return response;
+  },
   (error) => {
+    // Error response'u logla (debug için)
+    if (error.response) {
+      console.error('API Error Response:', {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+      
+      // 401 hatası için detaylı bilgi
+      if (error.response.status === 401) {
+        const token = localStorage.getItem('token');
+        console.error('401 Unauthorized - Token Info:', {
+          hasToken: !!token,
+          tokenPreview: token ? token.substring(0, 30) + '...' : 'No token',
+          currentPath: typeof window !== 'undefined' ? window.location.pathname : 'N/A'
+        });
+      }
+    } else if (error.request) {
+      console.error('API Request Error (No Response):', {
+        url: error.config?.url,
+        message: error.message
+      });
+    } else {
+      console.error('API Error:', error.message);
+    }
+    
     if (error.response?.status === 401) {
       // Handle unauthorized access
       // Sadece zaten giriş yapmış kullanıcılar için yönlendirme yap
@@ -38,11 +79,14 @@ apiClient.interceptors.response.use(
       const isLoginPage = currentPath === '/' || currentPath === '/login';
       
       if (!isLoginPage) {
+        console.warn('401 Unauthorized - Redirecting to login page');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/';
       }
     }
+    
+    // Error'u olduğu gibi döndür (frontend'de handle edilecek)
     return Promise.reject(error);
   }
 );
@@ -128,6 +172,98 @@ export const menuAPI = {
   // DELETE /api/admin/menu/{id} - Menüyü sil (Admin)
   delete: async (id, force = false) => {
     const response = await apiClient.delete(`/admin/menu/${id}?force=${force}`);
+    return response.data;
+  },
+};
+
+// Reservation API Functions
+export const reservationAPI = {
+  // GET /api/reservations/me - Kullanıcının rezervasyonlarını getir
+  getMyReservations: async () => {
+    const response = await apiClient.get('/reservations/me');
+    return response.data;
+  },
+
+  // POST /api/reservations - Rezervasyon yap
+  create: async (menuId) => {
+    const response = await apiClient.post('/reservations', {
+      menuId,
+    });
+    return response.data;
+  },
+
+  // DELETE /api/reservations/{id} - Rezervasyon iptal et
+  cancel: async (id) => {
+    const response = await apiClient.delete(`/reservations/${id}`);
+    return response.data;
+  },
+
+  // GET /api/admin/reservations/summary - Rezervasyon özeti (Admin)
+  getSummary: async () => {
+    const response = await apiClient.get('/admin/reservations/summary');
+    return response.data;
+  },
+
+  // GET /api/admin/reservations/daily - Günlük rezervasyonlar (Admin)
+  getDaily: async (date) => {
+    const response = await apiClient.get(`/admin/reservations/daily?date=${date}`);
+    return response.data;
+  },
+};
+
+// Feedback API Functions
+export const feedbackAPI = {
+  // POST /api/feedback - Geri bildirim gönder
+  submit: async (menuId, rating, comment = '') => {
+    const response = await apiClient.post('/feedback', {
+      menuId,
+      rating,
+      comment,
+    });
+    return response.data;
+  },
+
+  // GET /api/feedback/daily/{menuId} - Günlük geri bildirimler
+  getDaily: async (menuId) => {
+    const response = await apiClient.get(`/feedback/daily/${menuId}`);
+    return response.data;
+  },
+
+  // GET /api/admin/feedback - Tüm geri bildirimler (Admin)
+  getAll: async () => {
+    const response = await apiClient.get('/admin/feedback');
+    return response.data;
+  },
+};
+
+// Profile API Functions
+export const profileAPI = {
+  // GET /api/profile/me - Kullanıcı profilini getir
+  getMe: async () => {
+    const response = await apiClient.get('/profile/me');
+    return response.data;
+  },
+
+  // PUT /api/profile/me - Kullanıcı profilini güncelle
+  update: async (profileData) => {
+    const response = await apiClient.put('/profile/me', profileData);
+    return response.data;
+  },
+};
+
+// Notification API Functions
+export const notificationAPI = {
+  // GET /api/notifications - Kullanıcı bildirimlerini getir
+  getAll: async () => {
+    const response = await apiClient.get('/notifications');
+    return response.data;
+  },
+
+  // POST /api/notifications/mark-read - Bildirimleri okundu olarak işaretle
+  markAsRead: async (notificationIds = null) => {
+    const response = await apiClient.post('/notifications/mark-read', {
+      notificationIds,
+    });
     return response.data;
   },
 };

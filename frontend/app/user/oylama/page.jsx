@@ -14,7 +14,7 @@ export default function OylamaPage() {
     loadVotings();
   }, []);
 
-  // Oylamaları yükle
+  // Oylamaları yükle - localStorage'dan admin'in oluşturduğu anketleri al
   const loadVotings = async () => {
     try {
       setLoading(true);
@@ -26,47 +26,112 @@ export default function OylamaPage() {
       // setActiveVotings(activeResponse.data.data || []);
       // setPastVotings(pastResponse.data.data || []);
 
-      // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
-      setTimeout(() => {
-        setActiveVotings([
-          {
-            id: 'vote_001',
-            title: 'Gelecek Hafta (4-8 Kasım) Yemek Oylaması',
-            description: 'Gelecek haftanın menüsünde hangi yemekleri görmek istersiniz?',
-            startDate: '2025-11-03',
-            endDate: '2025-11-05',
-            options: [
-              { id: 'opt_1', name: 'Hünkar Beğendi', votes: 45, userVoted: false },
-              { id: 'opt_2', name: 'Izgara Köfte', votes: 38, userVoted: false },
-              { id: 'opt_3', name: 'Tavuk Şinitzel', votes: 52, userVoted: false },
-              { id: 'opt_4', name: 'Kuru Fasulye', votes: 28, userVoted: true },
-              { id: 'opt_5', name: 'Rosto', votes: 31, userVoted: false }
-            ],
-            totalVotes: 194,
-            userCanVote: true
+      // localStorage'dan admin'in oluşturduğu anketleri al
+      if (typeof window !== 'undefined') {
+        const savedVotings = localStorage.getItem('votings');
+        if (savedVotings) {
+          try {
+            const allVotings = JSON.parse(savedVotings);
+            
+            // Aktif anketleri formatla (status: 'active')
+            const active = allVotings
+              .filter(v => v.status === 'active')
+              .map(v => {
+                if (v.type === 'meal') {
+                  // Yemek seçimi anketi
+                  const userVotedIds = v.userVotes || [];
+                  return {
+                    id: `vote_${v.id}`,
+                    type: 'meal',
+                    title: v.title,
+                    description: v.description || '',
+                    startDate: v.createdAt || new Date().toISOString().split('T')[0],
+                    endDate: v.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    maxSelections: v.maxSelections || 3,
+                    options: (v.candidates || []).map((candidate, idx) => {
+                      const optId = `opt_${v.id}_${idx}`;
+                      return {
+                        id: optId,
+                        name: candidate.name || candidate,
+                        votes: 0,
+                        userVoted: userVotedIds.includes(optId)
+                      };
+                    }),
+                    totalVotes: 0,
+                    userCanVote: true
+                  };
+                } else if (v.type === 'yesno') {
+                  // Evet/Hayır anketi
+                  return {
+                    id: `vote_${v.id}`,
+                    type: 'yesno',
+                    title: v.title,
+                    description: v.description || '',
+                    startDate: v.createdAt || new Date().toISOString().split('T')[0],
+                    endDate: v.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    yesCount: v.yesCount || 0,
+                    noCount: v.noCount || 0,
+                    userVoted: v.userVote || null,
+                    userCanVote: true
+                  };
+                }
+                return null;
+              })
+              .filter(Boolean);
+            
+            // Geçmiş anketleri formatla (status: 'closed')
+            const past = allVotings
+              .filter(v => v.status === 'closed')
+              .map(v => {
+                if (v.type === 'meal') {
+                  return {
+                    id: `vote_${v.id}`,
+                    type: 'meal',
+                    title: v.title,
+                    description: v.description || '',
+                    startDate: v.createdAt || new Date().toISOString().split('T')[0],
+                    endDate: v.endDate || new Date().toISOString().split('T')[0],
+                    options: (v.candidates || []).map((candidate, idx) => ({
+                      id: `opt_${v.id}_${idx}`,
+                      name: candidate.name || candidate,
+                      votes: 0,
+                      userVoted: false
+                    })),
+                    totalVotes: 0,
+                    userCanVote: false
+                  };
+                } else if (v.type === 'yesno') {
+                  return {
+                    id: `vote_${v.id}`,
+                    type: 'yesno',
+                    title: v.title,
+                    description: v.description || '',
+                    startDate: v.createdAt || new Date().toISOString().split('T')[0],
+                    endDate: v.endDate || new Date().toISOString().split('T')[0],
+                    yesCount: v.yesCount || 0,
+                    noCount: v.noCount || 0,
+                    userVoted: null,
+                    userCanVote: false
+                  };
+                }
+                return null;
+              })
+              .filter(Boolean);
+            
+            setActiveVotings(active);
+            setPastVotings(past);
+            setLoading(false);
+            return;
+          } catch (e) {
+            console.error('Error parsing votings from localStorage:', e);
           }
-        ]);
+        }
+      }
 
-        setPastVotings([
-          {
-            id: 'vote_002',
-            title: 'Bu Hafta (28 Ekim - 1 Kasım) Yemek Oylaması',
-            description: 'Haftalık menü seçimi',
-            startDate: '2025-10-25',
-            endDate: '2025-10-27',
-            options: [
-              { id: 'opt_6', name: 'Mantı', votes: 65, userVoted: true },
-              { id: 'opt_7', name: 'Lahmacun', votes: 58, userVoted: false },
-              { id: 'opt_8', name: 'İskender', votes: 42, userVoted: false }
-            ],
-            totalVotes: 165,
-            userCanVote: false,
-            winner: 'Mantı'
-          }
-        ]);
-
-        setLoading(false);
-      }, 500);
+      // Eğer localStorage'da anket yoksa, boş liste göster
+      setActiveVotings([]);
+      setPastVotings([]);
+      setLoading(false);
     } catch (err) {
       setError('Oylamalar yüklenirken bir hata oluştu.');
       setLoading(false);
@@ -84,40 +149,128 @@ export default function OylamaPage() {
       //   optionId: optionId
       // });
 
-      // Mock - oylama yap (çoklu seçim: birden fazla yemeğe oy verilebilir)
-      setActiveVotings(prev => 
-        prev.map(voting => {
+      // Oylama yap ve localStorage'ı güncelle
+      setActiveVotings(prev => {
+        const updated = prev.map(voting => {
           if (voting.id === votingId) {
-            const newOptions = voting.options.map(opt => {
-              if (opt.id === optionId) {
-                // Aynı seçeneğe tıklandığında: eğer zaten oy verilmişse geri al, yoksa oy ver
-                if (opt.userVoted) {
-                  return {
-                    ...opt,
-                    votes: Math.max(0, opt.votes - 1),
-                    userVoted: false
-                  };
-                } else {
-                  return {
-                    ...opt,
-                    votes: opt.votes + 1,
-                    userVoted: true
-                  };
+            // Yemek seçimi anketi
+            if (voting.type === 'meal' && voting.options) {
+              const newOptions = voting.options.map(opt => {
+                if (opt.id === optionId) {
+                  // Aynı seçeneğe tıklandığında: eğer zaten oy verilmişse geri al, yoksa oy ver
+                  if (opt.userVoted) {
+                    return {
+                      ...opt,
+                      votes: Math.max(0, opt.votes - 1),
+                      userVoted: false
+                    };
+                  } else {
+                    // Maksimum seçim kontrolü
+                    const currentSelected = voting.options.filter(o => o.userVoted).length;
+                    if (voting.maxSelections && currentSelected >= voting.maxSelections) {
+                      return opt; // Maksimum seçime ulaşıldı
+                    }
+                    return {
+                      ...opt,
+                      votes: opt.votes + 1,
+                      userVoted: true
+                    };
+                  }
                 }
+                return opt;
+              });
+              return {
+                ...voting,
+                options: newOptions,
+                totalVotes: newOptions.reduce((sum, opt) => sum + opt.votes, 0),
+                userCanVote: true
+              };
+            }
+            // Evet/Hayır anketi
+            else if (voting.type === 'yesno') {
+              const newVote = optionId === 'yes' ? 'yes' : 'no';
+              const previousVote = voting.userVoted;
+              
+              // Eğer aynı seçeneğe tekrar tıklanırsa oyu geri al
+              if (previousVote === newVote) {
+                return {
+                  ...voting,
+                  yesCount: newVote === 'yes' ? Math.max(0, voting.yesCount - 1) : voting.yesCount,
+                  noCount: newVote === 'no' ? Math.max(0, voting.noCount - 1) : voting.noCount,
+                  userVoted: null
+                };
               }
-              // Diğer seçenekler değişmez (çoklu seçim)
-              return opt;
-            });
-            return {
-              ...voting,
-              options: newOptions,
-              totalVotes: newOptions.reduce((sum, opt) => sum + opt.votes, 0),
-              userCanVote: true // Kullanıcı istediği zaman oyunu değiştirebilir
-            };
+              
+              // Önceki oyu geri al
+              let newYesCount = voting.yesCount;
+              let newNoCount = voting.noCount;
+              
+              if (previousVote === 'yes') {
+                newYesCount = Math.max(0, newYesCount - 1);
+              } else if (previousVote === 'no') {
+                newNoCount = Math.max(0, newNoCount - 1);
+              }
+              
+              // Yeni oyu ekle
+              if (newVote === 'yes') {
+                newYesCount += 1;
+              } else {
+                newNoCount += 1;
+              }
+              
+              return {
+                ...voting,
+                yesCount: newYesCount,
+                noCount: newNoCount,
+                userVoted: newVote
+              };
+            }
           }
           return voting;
-        })
-      );
+        });
+        
+        // localStorage'daki anketleri güncelle
+        if (typeof window !== 'undefined') {
+          const savedVotings = localStorage.getItem('votings');
+          if (savedVotings) {
+            try {
+              const allVotings = JSON.parse(savedVotings);
+              // User'ın oy verdiği anketi güncelle
+              const votingIdNum = parseInt(votingId.replace('vote_', ''));
+              const updatedAllVotings = allVotings.map(v => {
+                if (v.id === votingIdNum) {
+                  const updatedVoting = updated.find(uv => uv.id === votingId);
+                  if (updatedVoting) {
+                    // User'ın oy verdiği bilgisini kaydet
+                    if (updatedVoting.type === 'meal') {
+                      // Yemek seçimi için oy verilen yemekleri kaydet
+                      return {
+                        ...v,
+                        userVotes: updatedVoting.options
+                          .filter(opt => opt.userVoted)
+                          .map(opt => opt.id)
+                      };
+                    } else if (updatedVoting.type === 'yesno') {
+                      return {
+                        ...v,
+                        userVote: updatedVoting.userVoted,
+                        yesCount: updatedVoting.yesCount,
+                        noCount: updatedVoting.noCount
+                      };
+                    }
+                  }
+                }
+                return v;
+              });
+              localStorage.setItem('votings', JSON.stringify(updatedAllVotings));
+            } catch (e) {
+              console.error('Error updating votings in localStorage:', e);
+            }
+          }
+        }
+        
+        return updated;
+      });
 
       setVoting('');
     } catch (err) {
@@ -190,75 +343,137 @@ export default function OylamaPage() {
                     </div>
                   </div>
 
-                  {/* Oylama Seçenekleri - Tüm yemekler gösterilir ama sadece oy verdiğiniz yemekler görünür */}
-                  <div className="space-y-3 mb-4">
-                    {votingItem.options.map((option) => {
-                      const isVotingThisOption = isVoting && voting.endsWith(option.id);
+                  {/* Yemek Seçimi Anketi */}
+                  {votingItem.type === 'meal' && (
+                    <>
+                      {/* Seçtiğiniz Yemekler */}
+                      <div className="space-y-3 mb-4">
+                        {votingItem.options && votingItem.options.filter(option => option.userVoted).length > 0 && (
+                          <>
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Seçtiğiniz Yemekler:</h4>
+                            {votingItem.options
+                              .filter(option => option.userVoted)
+                              .map((option) => {
+                                const isVotingThisOption = isVoting && voting.endsWith(option.id);
+                                return (
+                                  <div key={option.id} className="border border-blue-200 bg-blue-50 rounded-lg p-4">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3 flex-1">
+                                        <button
+                                          onClick={() => handleVote(votingItem.id, option.id)}
+                                          disabled={isVoting}
+                                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors bg-blue-600 border-blue-600 ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                        >
+                                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                          </svg>
+                                        </button>
+                                        <span className="font-medium text-gray-900">{option.name}</span>
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                          Seçtiniz
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </>
+                        )}
+                      </div>
                       
-                      // Sadece oy verilen yemekleri göster
-                      if (!option.userVoted) {
-                        return null;
-                      }
-                      
-                      return (
-                        <div key={option.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1">
-                              <button
-                                onClick={() => handleVote(votingItem.id, option.id)}
-                                disabled={isVoting}
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                  option.userVoted
-                                    ? 'bg-blue-600 border-blue-600'
-                                    : 'border-gray-300 hover:border-blue-500'
-                                } ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                              >
-                                {option.userVoted && (
-                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </button>
-                              <span className="font-medium text-gray-900">{option.name}</span>
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                Seçtiniz
-                              </span>
-                            </div>
+                      {/* Yeni Oy Vermek İçin Tüm Yemekler */}
+                      {votingItem.options && (
+                        <div className="mt-6 pt-6 border-t border-gray-200">
+                          <h4 className="text-sm font-medium text-gray-700 mb-3">
+                            {votingItem.maxSelections ? `Maksimum ${votingItem.maxSelections} yemek seçebilirsiniz:` : 'Yemek Seçiniz:'}
+                          </h4>
+                          <div className="space-y-2">
+                            {votingItem.options
+                              .filter(option => !option.userVoted)
+                              .map((option) => {
+                                const isVotingThisOption = isVoting && voting.endsWith(option.id);
+                                const currentSelected = votingItem.options.filter(o => o.userVoted).length;
+                                const canSelect = !votingItem.maxSelections || currentSelected < votingItem.maxSelections;
+                                
+                                return (
+                                  <div key={option.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        onClick={() => canSelect && handleVote(votingItem.id, option.id)}
+                                        disabled={isVoting || !canSelect}
+                                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors border-gray-300 hover:border-blue-500 ${isVoting || !canSelect ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                      >
+                                      </button>
+                                      <span className="font-medium text-gray-900">{option.name}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            {votingItem.options.filter(option => !option.userVoted).length === 0 && (
+                              <p className="text-sm text-gray-500 text-center py-2">Tüm seçeneklere oy verdiniz.</p>
+                            )}
+                            {votingItem.options.filter(option => option.userVoted).length === 0 && (
+                              <p className="text-sm text-gray-500 text-center py-2">Henüz oy vermediniz.</p>
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
-                    {votingItem.options.filter(option => option.userVoted).length === 0 && (
-                      <p className="text-sm text-gray-500 text-center py-4">Henüz oy vermediniz.</p>
-                    )}
-                  </div>
-                  
-                  {/* Yeni Oy Vermek İçin Tüm Yemekler (Sadece Oylama İçin) */}
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Yeni Oy Vermek İçin:</h4>
-                    <div className="space-y-2">
-                      {votingItem.options
-                        .filter(option => !option.userVoted) // Oy verilmeyen yemekleri göster
-                        .map((option) => {
-                          return (
-                            <div key={option.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
-                              <div className="flex items-center gap-3">
-                                <button
-                                  onClick={() => handleVote(votingItem.id, option.id)}
-                                  disabled={isVoting}
-                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors border-gray-300 hover:border-blue-500 ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                                >
-                                </button>
-                                <span className="font-medium text-gray-900">{option.name}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      {votingItem.options.filter(option => !option.userVoted).length === 0 && (
-                        <p className="text-sm text-gray-500 text-center py-2">Tüm seçeneklere oy verdiniz.</p>
+                      )}
+                    </>
+                  )}
+
+                  {/* Evet/Hayır Anketi */}
+                  {votingItem.type === 'yesno' && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => handleVote(votingItem.id, 'yes')}
+                          disabled={isVoting}
+                          className={`p-3 border-2 rounded-lg transition-colors ${
+                            votingItem.userVoted === 'yes'
+                              ? 'border-green-500 bg-green-50'
+                              : 'border-gray-200 hover:border-green-300'
+                          } ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          <div className="flex items-center justify-center gap-2">
+                            {votingItem.userVoted === 'yes' && (
+                              <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                            <span className="text-base font-semibold text-gray-900">Evet</span>
+                          </div>
+                          {votingItem.userVoted === 'yes' && (
+                            <p className="text-xs text-green-600 mt-1 text-center">Seçtiniz</p>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={() => handleVote(votingItem.id, 'no')}
+                          disabled={isVoting}
+                          className={`p-3 border-2 rounded-lg transition-colors ${
+                            votingItem.userVoted === 'no'
+                              ? 'border-red-500 bg-red-50'
+                              : 'border-gray-200 hover:border-red-300'
+                          } ${isVoting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          <div className="flex items-center justify-center gap-2">
+                            {votingItem.userVoted === 'no' && (
+                              <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                            <span className="text-base font-semibold text-gray-900">Hayır</span>
+                          </div>
+                          {votingItem.userVoted === 'no' && (
+                            <p className="text-xs text-red-600 mt-1 text-center">Seçtiniz</p>
+                          )}
+                        </button>
+                      </div>
+                      {votingItem.userVoted === null && (
+                        <p className="text-sm text-gray-500 text-center py-2">Lütfen bir seçenek belirleyiniz.</p>
                       )}
                     </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
@@ -295,26 +510,59 @@ export default function OylamaPage() {
                   </div>
                 </div>
 
-                {/* Sonuçlar - Sadece oy verdiğiniz yemekler gösterilir */}
-                <div className="space-y-3">
-                  {votingItem.options
-                    .filter(option => option.userVoted) // Sadece oy verilen yemekleri göster
-                    .map((option) => {
-                      return (
-                        <div key={option.id} className="border border-gray-200 rounded-lg p-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-900">{option.name}</span>
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                              Seçtiniz
-                            </span>
+                {/* Sonuçlar */}
+                {votingItem.type === 'meal' && votingItem.options && (
+                  <div className="space-y-3">
+                    {votingItem.options
+                      .filter(option => option.userVoted)
+                      .map((option) => {
+                        return (
+                          <div key={option.id} className="border border-gray-200 rounded-lg p-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900">{option.name}</span>
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                Seçtiniz
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  {votingItem.options.filter(option => option.userVoted).length === 0 && (
-                    <p className="text-sm text-gray-500 text-center py-4">Bu oylamada oy vermediniz.</p>
-                  )}
-                </div>
+                        );
+                      })}
+                    {votingItem.options.filter(option => option.userVoted).length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">Bu oylamada oy vermediniz.</p>
+                    )}
+                  </div>
+                )}
+                
+                {/* Evet/Hayır Anketi Sonuçları */}
+                {votingItem.type === 'yesno' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className={`border-2 rounded-lg p-4 ${
+                        votingItem.userVoted === 'yes'
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Evet</p>
+                        {votingItem.userVoted === 'yes' && (
+                          <p className="text-xs text-green-600 mt-2">Seçtiniz</p>
+                        )}
+                      </div>
+                      <div className={`border-2 rounded-lg p-4 ${
+                        votingItem.userVoted === 'no'
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}>
+                        <p className="text-sm font-medium text-gray-700 mb-1">Hayır</p>
+                        {votingItem.userVoted === 'no' && (
+                          <p className="text-xs text-red-600 mt-2">Seçtiniz</p>
+                        )}
+                      </div>
+                    </div>
+                    {votingItem.userVoted === null && (
+                      <p className="text-sm text-gray-500 text-center py-2">Bu oylamada oy vermediniz.</p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
