@@ -15,6 +15,23 @@ export default function ProfilPage() {
 
 
   useEffect(() => {
+    // Önce localStorage'dan user bilgisini al
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        console.log('Stored user from localStorage:', user);
+        if (user.email) {
+          setUserInfo({
+            name: user.userName || user.email.split('@')[0] || '',
+            email: user.email || ''
+          });
+        }
+      } catch (e) {
+        console.error('localStorage parse error:', e);
+      }
+    }
+    
     loadUserProfile();
   }, []);
 
@@ -25,11 +42,20 @@ export default function ProfilPage() {
       setError('');
 
       const response = await profileAPI.getMe();
+      console.log('Profile API Response:', response);
       
-      if (response.isSuccessful && response.data) {
+      // API response'u normalize et
+      const profileData = response?.data?.data || response?.data || response;
+      console.log('Profile Data:', profileData);
+      
+      if (profileData) {
+        const firstName = profileData.firstName || '';
+        const lastName = profileData.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        
         setUserInfo({
-          name: `${response.data.firstName || ''} ${response.data.lastName || ''}`.trim() || response.data.userName || response.data.email || '',
-          email: response.data.email || ''
+          name: fullName || profileData.userName || profileData.email || '',
+          email: profileData.email || ''
         });
       }
       
@@ -60,13 +86,21 @@ export default function ProfilPage() {
         lastName
       });
       
-      if (response.isSuccessful) {
+      console.log('Update Profile Response:', response);
+      
+      // Response başarılı mı kontrol et
+      const isSuccess = response?.success || response?.isSuccessful || response?.data?.success;
+      
+      if (isSuccess) {
         setSuccess('Profiliniz başarıyla güncellendi!');
+        
+        // Profili yeniden yükle
+        await loadUserProfile();
         
         // Başarı mesajını 3 saniye sonra temizle
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError(response.message || 'Profil güncellenirken bir hata oluştu.');
+        setError(response?.message || response?.data?.message || 'Profil güncellenirken bir hata oluştu.');
       }
       
       setSaving(false);

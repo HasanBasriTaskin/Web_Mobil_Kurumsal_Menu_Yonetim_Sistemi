@@ -36,27 +36,30 @@ export default function GecmisMenulerPage() {
         const today = new Date();
         const mockMenus = [];
 
-        // Son 4 haftanın menülerini oluştur
+        // Son 4 haftanın menülerini oluştur (Hafta 1 = en eski, Hafta 4 = en yeni)
         for (let week = 1; week <= 4; week++) {
           const weekStart = new Date(today);
-          weekStart.setDate(today.getDate() - (week * 7));
+          // Ters sıralama: Hafta 1 en eski olacak şekilde
+          const weeksAgo = (5 - week); // week=1 → 4 hafta önce, week=4 → 1 hafta önce
+          weekStart.setDate(today.getDate() - (weeksAgo * 7));
           const dayOfWeek = weekStart.getDay();
           const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
           const monday = new Date(weekStart);
           monday.setDate(weekStart.getDate() + diff);
 
           const weekMenus = [];
-          for (let i = 0; i < 7; i++) {
+          // Sadece Pazartesi - Cumartesi (6 gün)
+          for (let i = 0; i < 6; i++) {
             const date = new Date(monday);
             date.setDate(monday.getDate() + i);
             const dateStr = date.toISOString().split('T')[0];
 
             weekMenus.push({
               date: dateStr,
-              soup: ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün', 'Lentil'][i],
-              mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto'][i] || 'Yemek',
-              sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı'][i] || 'Yan Yemek',
-              dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani'][i] || 'Tatlı',
+              soup: ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün'][i],
+              mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto', 'Yemek'][i],
+              sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı', 'Yan Yemek'][i],
+              dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani', 'Tatlı'][i],
               calories: 1000 + Math.floor(Math.random() * 300),
               averageRating: (3 + Math.random() * 2).toFixed(1),
               totalReviews: Math.floor(Math.random() * 50) + 10
