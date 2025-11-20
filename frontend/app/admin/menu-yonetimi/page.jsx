@@ -2,213 +2,678 @@
 
 import { useState, useEffect } from 'react';
 import { menuAPI } from '@/services/api';
-
-const weekDays = [
-  'Pazartesi',
-  'Salı',
-  'Çarşamba',
-  'Perşembe',
-  'Cuma',
-  'Cumartesi'
-];
-
-const menuCategories = [
-  'Çorba',
-  'Ana Yemek',
-  'Salata',
-  'Tatlı'
-];
+import { toast } from 'sonner';
 
 export default function MenuYonetimiPage() {
-  const [selectedWeek, setSelectedWeek] = useState('');
-  const [menus, setMenus] = useState({});
-  const [publishedMenus, setPublishedMenus] = useState([]);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [menus, setMenus] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  
+  const [formData, setFormData] = useState({
+    date: '',
+    soup: '',
+    mainCourse: '',
+    sideDish: '',
+    dessert: '',
+    calories: 0
+  });
 
-  const handleMenuChange = (day, category, value) => {
-    setMenus(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [category]: value
+  // Menüleri yükle
+  useEffect(() => {
+    loadMenus();
+  }, []);
+
+  const loadMenus = async () => {
+    try {
+      setLoading(true);
+      const allMenus = [];
+      
+      // Her haftayı ayrı ayrı dene, hata olsa bile devam et
+      try {
+        const currentWeek = await menuAPI.getWeekly('current');
+        if (currentWeek.data) {
+          allMenus.push(...currentWeek.data);
+        }
+      } catch (err) {
+        // Suppress 404 - Bu hafta menü yoksa normal
       }
+      
+      try {
+        const nextWeek = await menuAPI.getWeekly('next');
+        if (nextWeek.data) {
+          allMenus.push(...nextWeek.data);
+        }
+      } catch (err) {
+        // Suppress 404 - Gelecek hafta menü yoksa normal
+      }
+      
+      // Tarihe göre sırala (en yeni en üstte)
+      allMenus.sort((a, b) => new Date(b.menuDate) - new Date(a.menuDate));
+      
+      setMenus(allMenus);
+    } catch (error) {
+      console.error('Menüler yüklenemedi:', error);
+      toast.error('Menüler yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Form alanlarını güncelle
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
     }));
   };
 
-  const handlePublish = async () => {
-    if (!selectedWeek) {
-      setErrorMessage('Lütfen hafta seçiniz!');
-      setTimeout(() => setErrorMessage(''), 5000);
+  // Yeni menü oluştur
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.date || !formData.soup || !formData.mainCourse) {
+      toast.error('Lütfen tarih, çorba ve ana yemek alanlarını doldurunuz');
       return;
     }
 
-    setErrorMessage('');
+    // Pazar günü kontrolü
+    const selectedDate = new Date(formData.date + 'T00:00:00');
+    if (selectedDate.getDay() === 0) { // 0 = Pazar
+      toast.error('Pazar günü için menü oluşturulamaz!');
+      return;
+    }
 
     try {
-      // Seçilen haftanın başlangıç tarihini hesapla
-      const [startDateStr] = selectedWeek.split(' - ');
-      const [day, month, year] = startDateStr.split('.');
-      const startDate = new Date(year, month - 1, day);
-
-      // Her gün için menü oluştur
-      const menuPromises = weekDays.map(async (dayName, index) => {
-        const menuDate = new Date(startDate);
-        menuDate.setDate(startDate.getDate() + index);
-        const dateStr = menuDate.toISOString().split('T')[0];
-
-        // Menü datasını hazırla
-        const menuData = {
-          date: dateStr,
-          soup: menus[dayName]?.['Çorba'] || '',
-          mainCourse: menus[dayName]?.['Ana Yemek'] || '',
-          sideDish: menus[dayName]?.['Salata'] || '',
-          dessert: menus[dayName]?.['Tatlı'] || '',
-          calories: 0 // Backend'de hesaplanabilir
-        };
-
-        // API'ye gönder
-        const response = await menuAPI.create(menuData);
-        return response;
+      const response = await menuAPI.create({
+        MenuDate: formData.date,
+        Soup: formData.soup,
+        MainCourse: formData.mainCourse,
+        SideDish: formData.sideDish || '',
+        Dessert: formData.dessert || '',
+        Calories: parseInt(formData.calories) || 0
       });
 
-      await Promise.all(menuPromises);
-
-      // Başarılı mesaj göster
-      alert('Menüler başarıyla yayınlandı!');
+      if (response.success || response.isSuccessful) {
+        toast.success('Menü başarıyla oluşturuldu');
+        setShowCreateModal(false);
+        resetForm();
+        loadMenus();
+      }
+    } catch (error) {
+      console.error('Menü oluşturma hatası:', error);
       
-      // Formu temizle
-      setMenus({});
-      setSelectedWeek('');
-    } catch (err) {
-      console.error('Menü yayınlama hatası:', err);
-      setErrorMessage(err.response?.data?.message || 'Menüler yayınlanırken bir hata oluştu.');
-      setTimeout(() => setErrorMessage(''), 5000);
+      const errorData = error.response?.data;
+      let errorMessage = '';
+      
+      if (errorData) {
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          errorMessage = errorData.errors.map(e => 
+            typeof e === 'string' ? e : (e.description || e.message || e.Message || JSON.stringify(e))
+          ).join(', ');
+        } else if (errorData.message || errorData.Message) {
+          errorMessage = errorData.message || errorData.Message;
+        }
+      }
+      
+      // 409 Conflict - Aynı tarihte menü var
+      if (error.response?.status === 409) {
+        toast.error(errorMessage || 'Bu tarih için zaten bir menü mevcut. Lütfen farklı bir tarih seçin.');
+      } else if (error.response?.status === 400) {
+        toast.error(errorMessage || 'Geçersiz veri. Lütfen tüm alanları kontrol edin.');
+      } else {
+        toast.error(errorMessage || 'Menü oluşturulurken bir hata oluştu');
+      }
     }
+  };
+
+  // Menü düzenle
+  const handleEdit = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedMenu) return;
+
+    // Pazar günü kontrolü
+    const selectedDate = new Date(formData.date + 'T00:00:00');
+    if (selectedDate.getDay() === 0) { // 0 = Pazar
+      toast.error('Pazar günü için menü oluşturulamaz!');
+      return;
+    }
+
+    try {
+      const response = await menuAPI.update(selectedMenu.id, {
+        MenuDate: formData.date,
+        Soup: formData.soup,
+        MainCourse: formData.mainCourse,
+        SideDish: formData.sideDish || '',
+        Dessert: formData.dessert || '',
+        Calories: parseInt(formData.calories) || 0
+      });
+
+      if (response.success || response.isSuccessful) {
+        toast.success('Menü başarıyla güncellendi');
+        setShowEditModal(false);
+        setSelectedMenu(null);
+        resetForm();
+        loadMenus();
+      }
+    } catch (error) {
+      console.error('Menü güncelleme hatası:', error);
+      // Error response details are parsed below
+      
+      const errorData = error.response?.data;
+      let errorMessage = '';
+      
+      if (errorData) {
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          errorMessage = errorData.errors.map(e => 
+            typeof e === 'string' ? e : (e.description || e.message || e.Message || JSON.stringify(e))
+          ).join(', ');
+        } else if (errorData.message || errorData.Message) {
+          errorMessage = errorData.message || errorData.Message;
+        }
+      }
+      
+      // 409 Conflict - Aynı tarihte başka menü var
+      if (error.response?.status === 409) {
+        toast.error(errorMessage || 'Bu tarih için zaten başka bir menü mevcut. Lütfen farklı bir tarih seçin.');
+      } else if (error.response?.status === 400) {
+        toast.error(errorMessage || 'Geçersiz veri. Lütfen tüm alanları kontrol edin.');
+      } else {
+        toast.error(errorMessage || 'Menü güncellenirken bir hata oluştu');
+      }
+    }
+  };
+
+  // Menü sil
+  const handleDelete = async (menuId, force = false) => {
+    // Zaten silme işlemi devam ediyorsa işlemi engelle
+    if (deletingId === menuId) return;
+
+    setDeletingId(menuId); // Silme işlemi başladı
+
+    try {
+      const response = await menuAPI.delete(menuId, force);
+      
+      if (response.success || response.isSuccessful) {
+        toast.success('Menü başarıyla silindi');
+        await loadMenus();
+      }
+    } catch (error) {
+      console.error('Menü silme hatası:', error);
+      
+      // 404 hatası - Menü zaten silinmiş
+      if (error.response?.status === 404) {
+        toast.info('Menü zaten silinmiş');
+        await loadMenus(); // Listeyi yenile
+        return;
+      }
+      
+      // Backend'den gelen hata mesajı
+      const errorMessage = error.response?.data?.message || error.response?.data?.Message || '';
+      const errorData = error.response?.data;
+      
+      // Rezervasyonlar varsa kullanıcıya sor
+      if (error.response?.status === 400 || error.response?.status === 409) {
+        // Rezervasyon veya ilişkili veri kontrolü
+        const hasReservationError = 
+          errorMessage.toLowerCase().includes('reservation') || 
+          errorMessage.toLowerCase().includes('rezervasyon') ||
+          (errorData?.errors && Array.isArray(errorData.errors) && 
+           errorData.errors.some(e => {
+             const errStr = typeof e === 'string' ? e : (e?.message || e?.Message || JSON.stringify(e));
+             return errStr.toLowerCase().includes('reservation') || errStr.toLowerCase().includes('rezervasyon');
+           }));
+        
+        if (hasReservationError && !force) {
+          // Rezervasyonlar varsa force delete ile tekrar dene
+          setDeletingId(null);
+          await handleDelete(menuId, true);
+          return;
+        } else {
+          toast.error(errorMessage || 'Menü silinirken bir hata oluştu');
+        }
+      } else {
+        toast.error(errorMessage || 'Menü silinirken bir hata oluştu');
+      }
+    } finally {
+      setDeletingId(null); // Silme işlemi bitti
+    }
+  };
+
+  // Düzenleme için menü yükle
+  const openEditModal = (menu) => {
+    setSelectedMenu(menu);
+    setFormData({
+      date: menu.menuDate.split('T')[0],
+      soup: menu.soup || '',
+      mainCourse: menu.mainCourse || '',
+      sideDish: menu.sideDish || '',
+      dessert: menu.dessert || '',
+      calories: menu.calories || 0
+    });
+    setShowEditModal(true);
+  };
+
+  // Formu sıfırla
+  const resetForm = () => {
+    setFormData({
+      date: '',
+      soup: '',
+      mainCourse: '',
+      sideDish: '',
+      dessert: '',
+      calories: 0
+    });
+  };
+
+  // Tarihi formatla
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('tr-TR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Menü Yönetimi</h1>
-        <p className="text-gray-600">Gelecek hafta için günlük menüleri oluşturun ve yayınlayın</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Menü Yönetimi</h1>
+          <p className="text-gray-600">Günlük menüleri oluşturun, düzenleyin ve silin</p>
+        </div>
+        <button
+          onClick={() => {
+            resetForm();
+            setShowCreateModal(true);
+          }}
+          className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Yeni Menü Ekle
+        </button>
       </div>
 
-      {/* Hata Mesajı */}
-      {errorMessage && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            <p className="text-red-800 font-medium">{errorMessage}</p>
-          </div>
+      {/* Menüler Listesi */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      ) : menus.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Henüz menü bulunmuyor</h3>
+          <p className="text-gray-600 mb-6">Yeni bir menü ekleyerek başlayın</p>
           <button
-            onClick={() => setErrorMessage('')}
-            className="text-red-600 hover:text-red-800"
+            onClick={() => {
+              resetForm();
+              setShowCreateModal(true);
+            }}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors inline-flex items-center gap-2"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
+            İlk Menüyü Ekle
           </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tarih
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Çorba
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ana Yemek
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Garnitür
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tatlı
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Kalori
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  İşlemler
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {menus.map((menu) => (
+                <tr key={menu.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {new Date(menu.menuDate).toLocaleDateString('tr-TR', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        year: 'numeric' 
+                      })}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(menu.menuDate).toLocaleDateString('tr-TR', { weekday: 'long' })}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">{menu.soup || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">{menu.mainCourse || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">{menu.sideDish || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">{menu.dessert || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{menu.calories} kcal</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => openEditModal(menu)}
+                        disabled={deletingId === menu.id}
+                        className="text-blue-600 hover:text-blue-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Düzenle"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(menu.id)}
+                        disabled={deletingId === menu.id}
+                        className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={deletingId === menu.id ? 'Siliniyor...' : 'Sil'}
+                      >
+                        {deletingId === menu.id ? (
+                          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Hafta Seçimi ve Form */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Yeni Menü Oluştur</h2>
-        
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Hafta Seçiniz
-          </label>
-          <input
-            type="week"
-            value={selectedWeek}
-            onChange={(e) => {
-              setSelectedWeek(e.target.value);
-              setErrorMessage(''); // Hafta seçildiğinde hata mesajını temizle
-            }}
-            className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
-          />
-        </div>
-
-        {/* Günlük Menü Formları */}
-        <div className="space-y-6">
-          {weekDays.map((day) => (
-            <div key={day} className="border border-gray-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{day}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {menuCategories.map((category) => (
-                  <div key={category}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {category}
-                    </label>
-                    <input
-                      type="text"
-                      value={menus[day]?.[category] || ''}
-                      onChange={(e) => handleMenuChange(day, category, e.target.value)}
-                      placeholder={`${category} giriniz`}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
-                    />
-                  </div>
-                ))}
-              </div>
+      {/* Yeni Menü Oluşturma Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Yeni Menü Ekle</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-          ))}
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={handlePublish}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-          >
-            Menüyü Yayınla
-          </button>
-        </div>
-      </div>
-
-      {/* Yayınlanmış Menüler */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Yayınlanmış Menüler</h2>
-        
-        {publishedMenus.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Henüz yayınlanmış menü bulunmamaktadır.</p>
-        ) : (
-          <div className="space-y-4">
-            {publishedMenus.map((menu) => (
-              <div key={menu.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{menu.week} Haftası</h3>
-                    <p className="text-sm text-gray-500">Yayınlanma: {menu.publishedAt}</p>
-                  </div>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                    Yayında
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {menu.menus.map((dayMenu) => (
-                    <div key={dayMenu.day} className="border border-gray-100 rounded-lg p-3">
-                      <h4 className="font-semibold text-gray-900 mb-2">{dayMenu.day}</h4>
-                      <div className="space-y-1 text-sm">
-                        {dayMenu.items.map((item, idx) => (
-                          item.name && (
-                            <div key={idx} className="flex justify-between">
-                              <span className="text-gray-600">{item.category}:</span>
-                              <span className="text-gray-900 font-medium">{item.name}</span>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            
+            <form onSubmit={handleCreate} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tarih <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
               </div>
-            ))}
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Çorba <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="soup"
+                  value={formData.soup}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Örn: Mercimek Çorbası"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ana Yemek <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="mainCourse"
+                  value={formData.mainCourse}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Örn: Tavuk Sote"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Garnitür
+                </label>
+                <input
+                  type="text"
+                  name="sideDish"
+                  value={formData.sideDish}
+                  onChange={handleInputChange}
+                  placeholder="Örn: Pilav"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tatlı
+                </label>
+                <input
+                  type="text"
+                  name="dessert"
+                  value={formData.dessert}
+                  onChange={handleInputChange}
+                  placeholder="Örn: Sütlaç"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Kalori
+                </label>
+                <input
+                  type="number"
+                  name="calories"
+                  value={formData.calories}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
+                  Menü Oluştur
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Menü Düzenleme Modal */}
+      {showEditModal && selectedMenu && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Menü Düzenle</h2>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedMenu(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <form onSubmit={handleEdit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tarih <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Çorba <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="soup"
+                  value={formData.soup}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Örn: Mercimek Çorbası"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ana Yemek <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="mainCourse"
+                  value={formData.mainCourse}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Örn: Tavuk Sote"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Garnitür
+                </label>
+                <input
+                  type="text"
+                  name="sideDish"
+                  value={formData.sideDish}
+                  onChange={handleInputChange}
+                  placeholder="Örn: Pilav"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tatlı
+                </label>
+                <input
+                  type="text"
+                  name="dessert"
+                  value={formData.dessert}
+                  onChange={handleInputChange}
+                  placeholder="Örn: Sütlaç"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Kalori
+                </label>
+                <input
+                  type="number"
+                  name="calories"
+                  value={formData.calories}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                />
+              </div>
+              
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setSelectedMenu(null);
+                  }}
+                  className="flex-1 px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Güncelle
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

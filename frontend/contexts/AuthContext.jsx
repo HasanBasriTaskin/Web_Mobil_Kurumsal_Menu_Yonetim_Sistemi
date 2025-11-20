@@ -14,12 +14,26 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from localStorage or cookie
   useEffect(() => {
     const initializeAuth = () => {
       try {
-        const storedToken = localStorage.getItem('token');
+        let storedToken = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
+
+        // If no token in localStorage, try to get from cookie
+        if (!storedToken) {
+          const cookieToken = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('token='))
+            ?.split('=')[1];
+          
+          if (cookieToken) {
+            storedToken = cookieToken;
+            // Sync back to localStorage
+            localStorage.setItem('token', cookieToken);
+          }
+        }
 
         if (storedToken && storedUser) {
           setToken(storedToken);
@@ -31,6 +45,7 @@ export function AuthProvider({ children }) {
         // Clear corrupted data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax';
       } finally {
         setLoading(false);
       }
@@ -55,6 +70,11 @@ export function AuthProvider({ children }) {
         // Store in localStorage
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(userData));
+
+        // Store token in cookie for middleware (expires in 7 days)
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 7);
+        document.cookie = `token=${newToken}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
 
         // Update state
         setToken(newToken);
@@ -111,6 +131,11 @@ export function AuthProvider({ children }) {
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(enhancedUserData));
 
+        // Store token in cookie for middleware (expires in 7 days)
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 7);
+        document.cookie = `token=${newToken}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax`;
+
         // Update state
         setToken(newToken);
         setUser(enhancedUserData);
@@ -147,6 +172,9 @@ export function AuthProvider({ children }) {
     // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Clear cookies
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax';
     
     // Set a flag to prevent "login required" toast
     localStorage.setItem('justLoggedOut', 'true');

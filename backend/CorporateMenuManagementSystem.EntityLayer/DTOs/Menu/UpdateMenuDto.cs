@@ -5,6 +5,9 @@ namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Menu
 {
     public class UpdateMenuDto
     {
+        [Required(ErrorMessage = "Menü tarihi zorunludur.")]
+        public DateTime MenuDate { get; set; }
+
         [Required(ErrorMessage = "Çorba alanı zorunludur.")]
         public string Soup { get; set; }
 

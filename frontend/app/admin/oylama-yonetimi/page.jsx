@@ -1,123 +1,152 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { surveyAPI } from '@/services/api';
+import { toast } from 'sonner';
 
 export default function OylamaYonetimiPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [votingTitle, setVotingTitle] = useState('');
   const [votingDescription, setVotingDescription] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  
-  // Mevcut anketler listesi - localStorage'dan yükle
-  const [votings, setVotings] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedVotings = localStorage.getItem('votings');
-      if (savedVotings) {
-        try {
-          return JSON.parse(savedVotings);
-        } catch (e) {
-          console.error('Error parsing votings from localStorage:', e);
-        }
-      }
-    }
-    // Varsayılan anketler
-    return [
-      {
-        id: 1,
-        type: 'yesno',
-        title: 'Mevcut salata barından memnun musunuz?',
-        description: 'Salata bar hizmeti hakkında görüşlerinizi paylaşın',
-        status: 'draft',
-        yesCount: 0,
-        noCount: 0,
-        createdAt: '2024-11-16'
-      }
-    ];
-  });
+  const [endDate, setEndDate] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [activeSurvey, setActiveSurvey] = useState(null);
+  const [surveyResults, setSurveyResults] = useState(null);
+  const [loadingResults, setLoadingResults] = useState(false);
 
-  // localStorage'dan anketleri yükle
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedVotings = localStorage.getItem('votings');
-      if (savedVotings) {
-        try {
-          const parsed = JSON.parse(savedVotings);
-          setVotings(parsed);
-        } catch (e) {
-          console.error('Error parsing votings from localStorage:', e);
-        }
-      }
-    }
+    loadActiveSurvey();
   }, []);
 
-  const handleCreateVoting = () => {
+  const loadActiveSurvey = async () => {
+    try {
+      setLoading(true);
+      const response = await surveyAPI.getActive();
+      
+      if ((response.isSuccessful || response.success) && response.data) {
+        setActiveSurvey(response.data);
+        // Anket varsa sonuçları da yükle
+        if (response.data.id) {
+          loadSurveyResults(response.data.id);
+        }
+      } else {
+        setActiveSurvey(null);
+        setSurveyResults(null);
+      }
+    } catch (error) {
+      // 404 hatası normaldir - aktif anket olmayabilir veya durdurulmuş olabilir
+      if (error.response?.status !== 404) {
+        console.error('Anket yükleme hatası:', error);
+      }
+      setActiveSurvey(null);
+      setSurveyResults(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSurveyResults = async (surveyId) => {
+    try {
+      setLoadingResults(true);
+      const response = await surveyAPI.getResults(surveyId);
+      
+      if ((response.isSuccessful || response.success) && response.data) {
+        setSurveyResults(response.data);
+      }
+    } catch (error) {
+      console.error('Anket sonuçları yükleme hatası:', error);
+    } finally {
+      setLoadingResults(false);
+    }
+  };
+
+  const handleCreateVoting = async () => {
     if (!votingTitle.trim()) {
-      setErrorMessage('Lütfen anket başlığı giriniz!');
-      setTimeout(() => setErrorMessage(''), 5000);
+      toast.error('Lütfen anket başlığı giriniz!');
       return;
     }
 
-    const newVoting = {
-      id: votings.length + 1,
-      type: 'yesno',
-      title: votingTitle,
-      description: votingDescription,
-      status: 'draft',
-      yesCount: 0,
-      noCount: 0,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    const updatedVotings = [...votings, newVoting];
-    setVotings(updatedVotings);
-    
-    // localStorage'a kaydet
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('votings', JSON.stringify(updatedVotings));
+    if (!votingDescription.trim()) {
+      toast.error('Lütfen anket sorusu giriniz!');
+      return;
     }
-    
-    setSuccessMessage('Anket başarıyla oluşturuldu!');
-    setTimeout(() => setSuccessMessage(''), 5000);
-    
-    // Formu sıfırla
-    setShowCreateForm(false);
-    setVotingTitle('');
-    setVotingDescription('');
-  };
 
-  const handleStartVoting = (votingId) => {
-    const updatedVotings = votings.map(v => 
-      v.id === votingId ? { ...v, status: 'active' } : v
-    );
-    setVotings(updatedVotings);
-    
-    // localStorage'a kaydet
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('votings', JSON.stringify(updatedVotings));
-    }
-  };
+    try {
+      setLoading(true);
+      const surveyData = {
+        title: votingTitle,
+        question: votingDescription,
+        endDate: endDate || null
+      };
 
-  const handleEndVoting = (votingId) => {
-    const updatedVotings = votings.map(v => 
-      v.id === votingId ? { ...v, status: 'closed' } : v
-    );
-    setVotings(updatedVotings);
-    
-    // localStorage'a kaydet
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('votings', JSON.stringify(updatedVotings));
+      const response = await surveyAPI.create(surveyData);
+      
+      if (response.isSuccessful || response.success) {
+        toast.success('Anket başarıyla oluşturuldu ve aktif edildi!');
+        
+        // Response'dan gelen anket bilgisini direkt kullan
+        if (response.data) {
+          setActiveSurvey(response.data);
+          // Sonuçları yükle (yeni oluşturuldu, 0 oy var)
+          if (response.data.id) {
+            loadSurveyResults(response.data.id);
+          }
+        }
+        
+        setShowCreateForm(false);
+        setVotingTitle('');
+        setVotingDescription('');
+        setEndDate('');
+      } else {
+        toast.error(response.message || 'Anket oluşturulamadı');
+      }
+    } catch (error) {
+      console.error('Anket oluşturma hatası:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.Message || 'Anket oluşturulurken bir hata oluştu';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteVoting = (votingId) => {
-    const updatedVotings = votings.filter(v => v.id !== votingId);
-    setVotings(updatedVotings);
-    
-    // localStorage'a kaydet
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('votings', JSON.stringify(updatedVotings));
+  const handleToggleStatus = async () => {
+    if (!activeSurvey) return;
+
+    try {
+      setLoading(true);
+      const newStatus = !activeSurvey.isActive;
+      const response = await surveyAPI.updateStatus(activeSurvey.id, newStatus);
+      
+      if (response.isSuccessful || response.success) {
+        toast.success(`Anket ${newStatus ? 'aktif edildi' : 'durduruldu'}`);
+        
+        // State'i direkt güncelle, API'den tekrar çekme
+        // Çünkü getActive sadece aktif anketleri döndürür
+        setActiveSurvey(prev => ({
+          ...prev,
+          isActive: newStatus
+        }));
+      } else {
+        toast.error(response.message || 'Durum güncellenemedi');
+      }
+    } catch (error) {
+      console.error('Durum güncelleme hatası:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.Message || 'Durum güncellenirken bir hata oluştu';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Belirsiz';
+    return new Date(dateString).toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   return (
@@ -125,47 +154,21 @@ export default function OylamaYonetimiPage() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Anket</h1>
-          <p className="text-gray-600">Anket oluşturun ve yönetin</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Anket Yönetimi</h1>
+          <p className="text-gray-600">Evet/Hayır anketi oluşturun ve yönetin</p>
         </div>
-        <button
-          onClick={() => {
-            setShowCreateForm(!showCreateForm);
-            setErrorMessage('');
-            setSuccessMessage('');
-          }}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-        >
-          {showCreateForm ? 'İptal' : '+ Yeni Anket Oluştur'}
-        </button>
-      </div>
-
-      {/* Başarı Mesajı */}
-      {successMessage && (
-        <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-green-800 font-medium">{successMessage}</p>
-        </div>
-      )}
-
-      {/* Hata Mesajı */}
-      {errorMessage && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            <p className="text-red-800 font-medium">{errorMessage}</p>
-          </div>
+        {!activeSurvey && (
           <button
-            onClick={() => setErrorMessage('')}
-            className="text-red-600 hover:text-red-800"
+            onClick={() => {
+              setShowCreateForm(!showCreateForm);
+            }}
+            disabled={loading}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
+            {showCreateForm ? 'İptal' : '+ Yeni Anket Oluştur'}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Yeni Anket Oluşturma Formu */}
       {showCreateForm && (
@@ -182,23 +185,41 @@ export default function OylamaYonetimiPage() {
                 type="text"
                 value={votingTitle}
                 onChange={(e) => setVotingTitle(e.target.value)}
-                placeholder="Örn: Mevcut salata barından memnun musunuz?"
+                placeholder="Örn: Kafeterya Memnuniyet Anketi"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                maxLength={200}
               />
+              <p className="text-xs text-gray-500 mt-1">{votingTitle.length}/200 karakter</p>
             </div>
 
-            {/* Anket Açıklaması */}
+            {/* Anket Sorusu */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">
-                Açıklama
+                Anket Sorusu (Evet/Hayır) <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={votingDescription}
                 onChange={(e) => setVotingDescription(e.target.value)}
-                placeholder="Anket hakkında açıklama (isteğe bağlı)"
+                placeholder="Örn: Mevcut salata barından memnun musunuz?"
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                maxLength={500}
               />
+              <p className="text-xs text-gray-500 mt-1">{votingDescription.length}/500 karakter</p>
+            </div>
+
+            {/* Bitiş Tarihi */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Bitiş Tarihi (İsteğe Bağlı)
+              </label>
+              <input
+                type="datetime-local"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+              />
+              <p className="text-xs text-gray-500 mt-1">Boş bırakırsanız anket süresiz olacaktır</p>
             </div>
 
             {/* Form Butonları */}
@@ -208,105 +229,151 @@ export default function OylamaYonetimiPage() {
                   setShowCreateForm(false);
                   setVotingTitle('');
                   setVotingDescription('');
-                  setErrorMessage('');
+                  setEndDate('');
                 }}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                disabled={loading}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 İptal
               </button>
               <button
                 onClick={handleCreateVoting}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                disabled={loading}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                Anket Oluştur
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Oluşturuluyor...
+                  </>
+                ) : (
+                  'Anket Oluştur ve Yayınla'
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Mevcut Anketler Listesi */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Mevcut Anketler</h2>
-        
-        {votings.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">Henüz anket oluşturulmamış.</p>
-            <p className="text-sm text-gray-400">Yukarıdaki "Yeni Anket Oluştur" butonuna tıklayarak anket oluşturabilirsiniz.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {votings.map((voting) => (
-              <div key={voting.id} className="border border-gray-200 rounded-lg p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        voting.status === 'draft' ? 'bg-gray-100 text-gray-700' :
-                        voting.status === 'active' ? 'bg-green-100 text-green-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {voting.status === 'draft' ? 'Taslak' :
-                         voting.status === 'active' ? 'Aktif' :
-                         'Kapalı'}
-                      </span>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                        Evet/Hayır
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">{voting.title}</h3>
-                    {voting.description && (
-                      <p className="text-sm text-gray-600 mb-2">{voting.description}</p>
-                    )}
-                    <p className="text-xs text-gray-400 mt-2">Oluşturulma: {voting.createdAt}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {voting.status === 'draft' && (
-                      <button
-                        onClick={() => handleStartVoting(voting.id)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                      >
-                        Başlat
-                      </button>
-                    )}
-                    {voting.status === 'active' && (
-                      <button
-                        onClick={() => handleEndVoting(voting.id)}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                      >
-                        Bitir
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteVoting(voting.id)}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                    >
-                      Sil
-                    </button>
-                  </div>
+      {/* Mevcut Anket */}
+      {loading && !activeSurvey ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        </div>
+      ) : activeSurvey ? (
+        <div className="space-y-6">
+          {/* Anket Bilgileri */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    activeSurvey.isActive 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {activeSurvey.isActive ? '✓ Aktif' : 'Durduruldu'}
+                  </span>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                    Evet/Hayır Anketi
+                  </span>
                 </div>
-
-                {/* Evet/Hayır Anketi için Sonuçlar */}
-                {voting.status !== 'draft' && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-sm font-medium text-gray-700 mb-3">Sonuçlar:</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 mb-1">Evet</p>
-                        <p className="text-2xl font-bold text-green-600">{voting.yesCount || 0}</p>
-                      </div>
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 mb-1">Hayır</p>
-                        <p className="text-2xl font-bold text-red-600">{voting.noCount || 0}</p>
-                      </div>
-                    </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{activeSurvey.title}</h3>
+                <p className="text-gray-700 mb-3">{activeSurvey.question}</p>
+                {activeSurvey.endDate && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>⏰ Bitiş: {formatDate(activeSurvey.endDate)}</span>
                   </div>
                 )}
               </div>
-            ))}
+              <button
+                onClick={handleToggleStatus}
+                disabled={loading}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                  activeSurvey.isActive
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {activeSurvey.isActive ? 'Durdur' : 'Yeniden Başlat'}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Anket Sonuçları */}
+          {loadingResults ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+              <p className="text-gray-600 mt-4">Sonuçlar yükleniyor...</p>
+            </div>
+          ) : surveyResults ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">Anket Sonuçları</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                  <p className="text-sm text-gray-600 mb-1">Toplam Katılımcı</p>
+                  <p className="text-3xl font-bold text-blue-600">{surveyResults.totalResponses}</p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                  <p className="text-sm text-gray-600 mb-1">Evet</p>
+                  <p className="text-3xl font-bold text-green-600">{surveyResults.yesCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">%{surveyResults.yesPercentage}</p>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                  <p className="text-sm text-gray-600 mb-1">Hayır</p>
+                  <p className="text-3xl font-bold text-red-600">{surveyResults.noCount}</p>
+                  <p className="text-xs text-gray-500 mt-1">%{surveyResults.noPercentage}</p>
+                </div>
+              </div>
+
+              {/* Görsel Grafik */}
+              {surveyResults.totalResponses > 0 && (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium text-green-700">Evet</span>
+                      <span className="text-sm text-gray-600">{surveyResults.yesCount} oy (%{surveyResults.yesPercentage})</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-4">
+                      <div
+                        className="bg-green-600 h-4 rounded-full transition-all duration-500"
+                        style={{ width: `${surveyResults.yesPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium text-red-700">Hayır</span>
+                      <span className="text-sm text-gray-600">{surveyResults.noCount} oy (%{surveyResults.noPercentage})</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-4">
+                      <div
+                        className="bg-red-600 h-4 rounded-full transition-all duration-500"
+                        style={{ width: `${surveyResults.noPercentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+          </svg>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Henüz Aktif Anket Bulunmuyor</h3>
+          <p className="text-gray-600 mb-4">Kullanıcıların katılabileceği yeni bir anket oluşturun</p>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
+            + Yeni Anket Oluştur
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navigation = [
   { 
@@ -50,11 +51,11 @@ const navigation = [
     )
   },
   { 
-    name: 'Oylama', 
+    name: 'Anket Yönetimi', 
     href: '/admin/oylama-yonetimi',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
     )
   },
@@ -63,17 +64,10 @@ const navigation = [
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { logout, user } = useAuth();
 
-  const handleLogout = () => {
-    // Token'ı temizle (localStorage veya cookie'den)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      // Cookie'leri de temizle
-      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      document.cookie = 'user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    }
-    // Login sayfasına yönlendir
+  const handleLogout = async () => {
+    await logout();
     router.push('/');
   };
 
@@ -98,13 +92,13 @@ export default function AdminLayout({ children }) {
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-sm">
-                AD
+                {user?.firstName?.[0]}{user?.lastName?.[0]}
               </div>
               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">Administrator</p>
-              <p className="text-xs text-gray-500 truncate">admin@taskinnovation.com</p>
+              <p className="text-sm font-medium text-gray-900 truncate">{user?.firstName} {user?.lastName}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
           </div>
         </div>

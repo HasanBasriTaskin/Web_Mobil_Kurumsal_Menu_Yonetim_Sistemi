@@ -1,15 +1,97 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { menuAPI, feedbackAPI, surveyAPI } from '@/services/api';
 
 export default function AdminPage() {
-  // Örnek veriler (gerçek uygulamada API'den gelecek)
-  const stats = {
+  const [stats, setStats] = useState({
     totalMeals: 0,
     activeMenus: 0,
     pendingComments: 0,
     activeVotings: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardStats();
+  }, []);
+
+  const loadDashboardStats = async () => {
+    try {
+      setLoading(true);
+      
+      // Menüleri yükle
+      let totalMenus = 0;
+      let activeMenus = 0;
+      
+      try {
+        const currentWeek = await menuAPI.getWeekly('current');
+        if (currentWeek.data) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          totalMenus += currentWeek.data.length;
+          activeMenus += currentWeek.data.filter(menu => new Date(menu.menuDate) >= today).length;
+        }
+      } catch (err) {
+        // Current week menü yoksa sessizce devam et
+      }
+      
+      try {
+        const nextWeek = await menuAPI.getWeekly('next');
+        if (nextWeek.data) {
+          totalMenus += nextWeek.data.length;
+          activeMenus += nextWeek.data.length; // Gelecek haftanın tüm menüleri aktif
+        }
+      } catch (err) {
+        // Next week menü yoksa sessizce devam et
+      }
+
+      // Yorumları yükle
+      let commentsCount = 0;
+      try {
+        const feedbackResponse = await feedbackAPI.getAll();
+        if (feedbackResponse.isSuccessful && feedbackResponse.data) {
+          commentsCount = feedbackResponse.data.length;
+        }
+      } catch (err) {
+        // Yorum yoksa 0 olarak kalacak
+      }
+
+      // Aktif anketi kontrol et
+      let activeVotingsCount = 0;
+      try {
+        const surveyResponse = await surveyAPI.getActive();
+        if (surveyResponse.isSuccessful && surveyResponse.data) {
+          activeVotingsCount = 1;
+        }
+      } catch (err) {
+        // Aktif anket yoksa 0 olarak kalacak
+      }
+
+      setStats({
+        totalMeals: totalMenus,
+        activeMenus: activeMenus,
+        pendingComments: commentsCount,
+        activeVotings: activeVotingsCount,
+      });
+    } catch (error) {
+      console.error('Dashboard istatistikleri yüklenemedi:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">

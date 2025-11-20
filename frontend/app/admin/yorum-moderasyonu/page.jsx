@@ -1,342 +1,174 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { feedbackAPI } from '@/services/api';
+import { toast } from 'sonner';
 
 export default function YorumModerasyonuPage() {
-  const [viewMode, setViewMode] = useState('raw');
-  const [filterPeriod, setFilterPeriod] = useState('7');
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRating, setFilterRating] = useState('all');
 
-  const [allComments, setAllComments] = useState([
-    {
-      id: 1,
-      employeeId: '12345',
-      comment: 'Yeni makarna yemeği harikaydı, ancak porsiyon boyutu fiyatına göre biraz küçük geldi. Daha büyük bir seçenek görmek isterim.',
-      date: '26 Eki 2024',
-      time: '13:15',
-      status: 'pending'
-    },
-    {
-      id: 2,
-      employeeId: '54321',
-      comment: 'Salata barında daha fazla çeşitlilik gerekiyor. Haftalardır aynı seçenekler var. Ayrıca bugün marul çok taze değildi.',
-      date: '26 Eki 2024',
-      time: '11:30',
-      status: 'pending'
-    },
-    {
-      id: 3,
-      employeeId: '67890',
-      comment: 'Yeni kahve makinesini seviyorum! Çok daha hızlı ve kahve tadı harika. Yükseltme için teşekkürler.',
-      date: '25 Eki 2024',
-      time: '16:55',
-      status: 'approved'
-    },
-    {
-      id: 4,
-      employeeId: '11223',
-      comment: 'Lütfen daha fazla vejetaryen seçenek olabilir mi? Özellikle sıcak yemekler için seçenekler çok sınırlı. Izgara istasyonu her zaman dolu ve uzun bekleme süresi sinir bozucu. Öğle yemeği saatlerinde süreci hızlandırmak için başka bir kişi eklenmesini öneriyorum.',
-      date: '25 Eki 2024',
-      time: '09:02',
-      status: 'pending'
+  useEffect(() => {
+    loadFeedbacks();
+  }, []);
+
+  const loadFeedbacks = async () => {
+    try {
+      setLoading(true);
+      const response = await feedbackAPI.getAll();
+      
+      if (response.isSuccessful && response.data) {
+        setFeedbacks(response.data);
+      } else {
+        setFeedbacks([]);
+        toast.error('Yorumlar yüklenemedi');
+      }
+    } catch (error) {
+      console.error('Yorumlar yükleme hatası:', error);
+      setFeedbacks([]);
+      toast.error('Yorumlar yüklenirken bir hata oluştu');
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  const handleApprove = (comment) => {
-    setAllComments(allComments.map(c => 
-      c.id === comment.id ? { ...c, status: 'approved' } : c
-    ));
   };
 
-  const handleReject = (comment) => {
-    setAllComments(allComments.map(c => 
-      c.id === comment.id ? { ...c, status: 'rejected' } : c
-    ));
-  };
+  // Filtreleme
+  const filteredFeedbacks = feedbacks.filter(feedback => {
+    const matchesSearch = searchTerm === '' || 
+      feedback.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      feedback.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      feedback.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRating = filterRating === 'all' || feedback.rating === parseInt(filterRating);
+    
+    return matchesSearch && matchesRating;
+  });
 
-  const filteredComments = allComments
-    .sort((a, b) => {
-      // Tarih sırasına göre sıralama (en yeni en üstte)
-      const dateA = new Date(a.date + ' ' + a.time);
-      const dateB = new Date(b.date + ' ' + b.time);
-      return dateB - dateA; // Ters sıralama (en yeni önce)
+  // Basit istatistikler
+  const totalComments = feedbacks.length;
+  const averageRating = totalComments > 0
+    ? (feedbacks.reduce((sum, f) => sum + f.rating, 0) / totalComments).toFixed(1)
+    : 0;
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
-
-  // İstatistikler hesaplama
-  const stats = {
-    total: allComments.length,
-    pending: allComments.filter(c => c.status === 'pending').length,
-    approved: allComments.filter(c => c.status === 'approved').length,
-    rejected: allComments.filter(c => c.status === 'rejected').length,
-    pendingPercentage: allComments.length > 0 
-      ? Math.round((allComments.filter(c => c.status === 'pending').length / allComments.length) * 100)
-      : 0
   };
 
-  // Raw List View Render
-  const renderRawListView = () => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Tüm Yorumlar</h2>
-        <p className="text-sm text-gray-500 mt-1">En yeniden eskiye sıralanmıştır</p>
-      </div>
-      {filteredComments.length === 0 ? (
-        <div className="p-12 text-center">
-          <p className="text-gray-500">Yorum bulunamadı.</p>
-        </div>
-      ) : (
-        <div className="divide-y divide-gray-200">
-          {filteredComments.map((comment) => (
-            <div key={comment.id} className="p-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <p className="text-sm font-semibold text-gray-900">
-                      Çalışan #{comment.employeeId}
-                    </p>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      comment.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      comment.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {comment.status === 'approved' ? 'Onaylandı' :
-                       comment.status === 'rejected' ? 'Reddedildi' :
-                       'Bekliyor'}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 leading-relaxed mb-3">{comment.comment}</p>
-                  <p className="text-xs text-gray-500">
-                    {comment.date}, {comment.time}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  // Card View Render
-  const renderCardView = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {filteredComments.length === 0 ? (
-        <div className="col-span-full p-12 text-center bg-white rounded-lg shadow-sm border border-gray-200">
-          <p className="text-gray-500">Yorum bulunamadı.</p>
-        </div>
-      ) : (
-        filteredComments.map((comment) => (
-          <div key={comment.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-gray-900">
-                  Çalışan #{comment.employeeId}
-                </p>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  comment.status === 'approved' ? 'bg-green-100 text-green-800' :
-                  comment.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                  'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {comment.status === 'approved' ? 'Onaylandı' :
-                   comment.status === 'rejected' ? 'Reddedildi' :
-                   'Bekliyor'}
-                </span>
-              </div>
-              <p className="text-gray-700 text-sm mb-3 line-clamp-4 leading-relaxed">{comment.comment}</p>
-              <p className="text-xs text-gray-500">
-                {comment.date}, {comment.time}
-              </p>
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              {comment.status === 'pending' && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleApprove(comment)}
-                    className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors font-medium"
-                  >
-                    Onayla
-                  </button>
-                  <button
-                    onClick={() => handleReject(comment)}
-                    className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors font-medium"
-                  >
-                    Reddet
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-
-  // Analytics View Render
-  const renderAnalyticsView = () => (
-    <div className="space-y-6">
-      {/* İstatistik Kartları */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm font-medium text-gray-600 mb-2">Toplam Yorum</p>
-          <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm font-medium text-gray-600 mb-2">Bekleyen</p>
-          <p className="text-3xl font-bold text-yellow-600">{stats.pending}</p>
-          <p className="text-xs text-gray-500 mt-1">%{stats.pendingPercentage}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm font-medium text-gray-600 mb-2">Onaylanan</p>
-          <p className="text-3xl font-bold text-green-600">{stats.approved}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            %{stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm font-medium text-gray-600 mb-2">Reddedilen</p>
-          <p className="text-3xl font-bold text-red-600">{stats.rejected}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            %{stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0}
-          </p>
-        </div>
-      </div>
-
-      {/* Durum Dağılımı */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Durum Dağılımı</h3>
-        <div className="space-y-4">
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Bekleyen</span>
-              <span className="text-gray-900 font-medium">{stats.pending} yorum</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-yellow-600 h-2 rounded-full transition-all" 
-                style={{ width: `${stats.pendingPercentage}%` }}
-              ></div>
-            </div>
-          </div>
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Onaylanan</span>
-              <span className="text-gray-900 font-medium">{stats.approved} yorum</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-green-600 h-2 rounded-full transition-all" 
-                style={{ width: `${stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0}%` }}
-              ></div>
-            </div>
-          </div>
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Reddedilen</span>
-              <span className="text-gray-900 font-medium">{stats.rejected} yorum</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
-                className="bg-red-600 h-2 rounded-full transition-all" 
-                style={{ width: `${stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Son Aktiviteler */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Son Aktiviteler</h3>
-        <div className="space-y-3">
-          {allComments.slice(0, 5).map((comment) => (
-            <div key={comment.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-              <div>
-                <p className="text-sm text-gray-900 font-medium">Çalışan #{comment.employeeId}</p>
-                <p className="text-xs text-gray-500">{comment.date}, {comment.time}</p>
-              </div>
-              <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                comment.status === 'approved' ? 'bg-green-100 text-green-800' :
-                comment.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                'bg-yellow-100 text-yellow-800'
-              }`}>
-                {comment.status === 'approved' ? 'Onaylandı' :
-                 comment.status === 'rejected' ? 'Reddedildi' :
-                 'Bekliyor'}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  const getRatingColor = (rating) => {
+    if (rating >= 4) return 'text-green-600 bg-green-100';
+    if (rating === 3) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
 
   return (
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Kullanıcı Yorumları</h1>
-        <p className="text-gray-600">Kullanıcılar tarafından gönderilen tüm yorumları inceleyin, en yeniden eskiye sıralanmıştır.</p>
+        <p className="text-gray-600">Menü değerlendirmelerini görüntüleyin</p>
       </div>
 
-      {/* View Tabs */}
-      <div className="mb-6 border-b border-gray-200">
-        <div className="flex gap-6">
-          <button
-            onClick={() => setViewMode('raw')}
-            className={`pb-4 px-2 font-medium transition-colors border-b-2 text-base ${
-              viewMode === 'raw'
-                ? 'text-green-600 border-green-600'
-                : 'text-gray-600 hover:text-gray-900 border-transparent'
-            }`}
-          >
-            Liste Görünümü
-          </button>
-          <button
-            onClick={() => setViewMode('card')}
-            className={`pb-4 px-2 font-medium transition-colors border-b-2 text-base ${
-              viewMode === 'card'
-                ? 'text-green-600 border-green-600'
-                : 'text-gray-600 hover:text-gray-900 border-transparent'
-            }`}
-          >
-            Kart Görünümü
-          </button>
-          <button
-            onClick={() => setViewMode('analytics')}
-            className={`pb-4 px-2 font-medium transition-colors border-b-2 text-base ${
-              viewMode === 'analytics'
-                ? 'text-green-600 border-green-600'
-                : 'text-gray-600 hover:text-gray-900 border-transparent'
-            }`}
-          >
-            Analitik Görünüm
-          </button>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
-      </div>
+      ) : totalComments === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Henüz Yorum Bulunmuyor</h3>
+          <p className="text-gray-600">Kullanıcılar menüleri değerlendirdikçe yorumlar burada görünecektir.</p>
+        </div>
+      ) : (
+        <>
+          {/* İstatistikler */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <p className="text-sm font-medium text-gray-600 mb-2">Toplam Yorum</p>
+              <p className="text-4xl font-bold text-blue-600">{totalComments}</p>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <p className="text-sm font-medium text-gray-600 mb-2">Ortalama Puan</p>
+              <p className="text-4xl font-bold text-green-600">{averageRating}/5</p>
+            </div>
+          </div>
 
-      {/* Filter Bar - Only for Raw and Card View */}
-      {(viewMode === 'raw' || viewMode === 'card') && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
+          {/* Basit Filtreler */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Kullanıcı adı veya yorum ara..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                />
+              </div>
               <select
-                value={filterPeriod}
-                onChange={(e) => setFilterPeriod(e.target.value)}
-                className="px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 appearance-none bg-white text-gray-900"
+                value={filterRating}
+                onChange={(e) => setFilterRating(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               >
-                <option value="7">Son 7 Gün</option>
-                <option value="30">Son 30 Gün</option>
-                <option value="90">Son 90 Gün</option>
-                <option value="all">Tüm Zamanlar</option>
+                <option value="all">Tüm Puanlar</option>
+                <option value="5">5 Yıldız</option>
+                <option value="4">4 Yıldız</option>
+                <option value="3">3 Yıldız</option>
+                <option value="2">2 Yıldız</option>
+                <option value="1">1 Yıldız</option>
               </select>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* View Content */}
-      {viewMode === 'raw' && renderRawListView()}
-      {viewMode === 'card' && renderCardView()}
-      {viewMode === 'analytics' && renderAnalyticsView()}
+          {/* Yorumlar Listesi */}
+          {filteredFeedbacks.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+              <p className="text-gray-600">Filtreye uygun yorum bulunamadı</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredFeedbacks.map((feedback) => (
+                <div key={feedback.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {feedback.user?.firstName} {feedback.user?.lastName}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {formatDate(feedback.createdAt)}
+                      </p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${getRatingColor(feedback.rating)}`}>
+                      {'⭐'.repeat(feedback.rating)}
+                    </div>
+                  </div>
+                  
+                  {feedback.comment && (
+                    <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                      <p className="text-gray-700">{feedback.comment}</p>
+                    </div>
+                  )}
+                  
+                  {feedback.menu && (
+                    <p className="text-sm text-gray-500">
+                      Menü: {new Date(feedback.menu.menuDate).toLocaleDateString('tr-TR')}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

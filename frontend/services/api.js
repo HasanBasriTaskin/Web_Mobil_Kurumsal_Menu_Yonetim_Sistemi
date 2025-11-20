@@ -18,15 +18,6 @@ apiClient.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      // Debug: Token'ın varlığını kontrol et
-      console.log('API Request:', {
-        url: config.url,
-        method: config.method,
-        hasToken: !!token,
-        tokenPreview: token ? token.substring(0, 20) + '...' : 'No token'
-      });
-    } else {
-      console.warn('API Request without token:', config.url);
     }
     return config;
   },
@@ -85,12 +76,6 @@ apiClient.interceptors.response.use(
               userName: userName
             }
           };
-          
-          console.log('✅ Auth response normalized:', {
-            hasToken: !!token,
-            userEmail,
-            userRole
-          });
         } catch (err) {
           console.error('Token decode error:', err);
         }
@@ -102,8 +87,14 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Error response'u logla (debug için)
-    if (error.response) {
+    // Bazı endpoint'ler için 404 hatası beklenen bir durum
+    const isSurveyActive = error.config?.url?.includes('/survey/active');
+    const isWeeklyMenu = error.config?.url?.includes('/menu/weekly');
+    const is404 = error.response?.status === 404;
+    const isExpected404 = is404 && (isSurveyActive || isWeeklyMenu);
+    
+    // Error response'u logla (debug için) - beklenen 404'ler hariç
+    if (error.response && !isExpected404) {
       console.error('API Error Response:', {
         status: error.response.status,
         statusText: error.response.statusText,
@@ -122,16 +113,16 @@ apiClient.interceptors.response.use(
           currentPath: typeof window !== 'undefined' ? window.location.pathname : 'N/A'
         });
       }
-    } else if (error.request) {
+    } else if (error.request && !isSurveyActive) {
       console.error('API Request Error (No Response):', {
         url: error.config?.url,
         message: error.message
       });
-    } else {
+    } else if (!isSurveyActive) {
       console.error('API Error:', error.message);
     }
     
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isSurveyActive) {
       // Handle unauthorized access
       // Sadece zaten giriş yapmış kullanıcılar için yönlendirme yap
       // Login sayfasındayken yönlendirme yapma (login sayfası '/' path'inde)
@@ -345,6 +336,48 @@ export const notificationAPI = {
     const response = await apiClient.post('/notifications/mark-read', body);
     return response.data;
   },
+};
+
+// Survey API Functions
+export const surveyAPI = {
+  // Admin - Anket oluştur
+  create: async (surveyData) => {
+    const response = await apiClient.post('/admin/survey', {
+      Title: surveyData.title,
+      Question: surveyData.question,
+      EndDate: surveyData.endDate || null
+    });
+    return response.data;
+  },
+
+  // Admin - Anket sonuçlarını getir
+  getResults: async (surveyId) => {
+    const response = await apiClient.get(`/admin/survey/${surveyId}/results`);
+    return response.data;
+  },
+
+  // Admin - Anket durumunu güncelle
+  updateStatus: async (surveyId, isActive) => {
+    const response = await apiClient.put(`/admin/survey/${surveyId}/status`, { 
+      IsActive: isActive 
+    });
+    return response.data;
+  },
+
+  // User - Aktif anketi getir
+  getActive: async () => {
+    const response = await apiClient.get('/survey/active');
+    return response.data;
+  },
+
+  // User - Ankete cevap ver
+  respond: async (surveyId, answer) => {
+    const response = await apiClient.post('/survey/respond', {
+      SurveyId: surveyId,
+      Answer: answer
+    });
+    return response.data;
+  }
 };
 
 export default apiClient;

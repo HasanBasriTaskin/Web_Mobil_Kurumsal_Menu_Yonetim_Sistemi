@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const categories = ['Çorba', 'Ana Yemek', 'Salata', 'Tatlı'];
 
@@ -16,6 +16,25 @@ export default function YemekYonetimiPage() {
     price: ''
   });
   const [errorMessage, setErrorMessage] = useState('');
+
+  // localStorage'dan yemekleri yükle
+  useEffect(() => {
+    const savedMeals = localStorage.getItem('meals');
+    if (savedMeals) {
+      try {
+        setMeals(JSON.parse(savedMeals));
+      } catch (err) {
+        console.error('Yemekler yüklenemedi:', err);
+      }
+    }
+  }, []);
+
+  // Yemekler değiştiğinde localStorage'a kaydet
+  useEffect(() => {
+    if (meals.length > 0) {
+      localStorage.setItem('meals', JSON.stringify(meals));
+    }
+  }, [meals]);
 
   const handleOpenModal = (meal = null) => {
     if (meal) {
@@ -85,7 +104,14 @@ export default function YemekYonetimiPage() {
   };
 
   const handleDelete = (id) => {
-    setMeals(meals.filter(meal => meal.id !== id));
+    const updatedMeals = meals.filter(meal => meal.id !== id);
+    setMeals(updatedMeals);
+    // localStorage'ı da güncelle
+    if (updatedMeals.length > 0) {
+      localStorage.setItem('meals', JSON.stringify(updatedMeals));
+    } else {
+      localStorage.removeItem('meals'); // Hiç yemek kalmadıysa temizle
+    }
   };
 
   return (
