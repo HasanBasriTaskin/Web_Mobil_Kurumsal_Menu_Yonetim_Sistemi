@@ -251,17 +251,17 @@ export default function RezervasyonlarimPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
+      <div className="p-4 sm:p-8 flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Yükleniyor...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-sm sm:text-base text-gray-600">Yükleniyor...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 relative">
+    <div className="p-4 sm:p-6 lg:p-8 relative">
       {/* Onay Mesajı Modal */}
       {showCancelConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -340,9 +340,9 @@ export default function RezervasyonlarimPage() {
       )}
 
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Rezervasyonlarım</h1>
-        <p className="text-gray-600">Tüm rezervasyonlarınızı görüntüleyebilir ve yönetebilirsiniz</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Rezervasyonlarım</h1>
+        <p className="text-sm sm:text-base text-gray-600">Tüm rezervasyonlarınızı görüntüleyebilir ve yönetebilirsiniz</p>
       </div>
 
       {error && (

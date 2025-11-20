@@ -332,11 +332,11 @@ export default function UserPage() {
   }
 
   return (
-    <div className="p-8 relative">
+    <div className="p-4 sm:p-6 lg:p-8 relative">
       {/* Onay Mesajı Modal */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl p-4 sm:p-6 max-w-md w-full mx-auto">
             {cancelMessage ? (
               // Hata veya başarı mesajı
               <div className="text-center">
@@ -407,9 +407,9 @@ export default function UserPage() {
       )}
 
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Ana Sayfa</h1>
-        <p className="text-gray-600">{getTodayDate()}</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Ana Sayfa</h1>
+        <p className="text-sm sm:text-base text-gray-600">{getTodayDate()}</p>
       </div>
 
       {error && (
@@ -420,8 +420,8 @@ export default function UserPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Günün Menüsü */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 underline">Günün Menüsü</h2>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 underline">Günün Menüsü</h2>
           
           {todayMenu ? (
             <div className="space-y-4">
@@ -460,8 +460,8 @@ export default function UserPage() {
         </div>
 
         {/* Rezervasyon Durumu */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Rezervasyon Durumu</h2>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Rezervasyon Durumu</h2>
           
           {reservationStatus === 'reserved' ? (
             <div className="space-y-4">
@@ -532,9 +532,9 @@ export default function UserPage() {
       </div>
 
       {todayMenu && (
-        <div className="mt-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        <div className="mt-4 sm:mt-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
               {isEditMode ? 'Yorumunuzu Güncelleyin' : 'Menüyü Değerlendirin'}
             </h2>
             {isEditMode && (
@@ -573,7 +573,7 @@ export default function UserPage() {
                         title={`${star} yıldız`}
                       >
                         <svg
-                          className={`w-10 h-10 transition-colors ${
+                          className={`w-8 h-8 sm:w-10 sm:h-10 transition-colors ${
                             star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300 hover:text-yellow-200'
                           }`}
                           fill="currentColor"
@@ -624,9 +624,9 @@ export default function UserPage() {
       )}
 
       {todayMenu && (
-        <div className="mt-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Diğer Çalışanların Yorumları</h2>
+        <div className="mt-4 sm:mt-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Diğer Çalışanların Yorumları</h2>
             
             {loadingComments ? (
               <p className="text-center text-gray-500 py-4">Yorumlar yükleniyor...</p>

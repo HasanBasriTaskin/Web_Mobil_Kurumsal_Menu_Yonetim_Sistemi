@@ -217,7 +217,7 @@ export default function MenulerPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
+      <div className="p-4 sm:p-8 flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Yükleniyor...</p>
@@ -227,7 +227,7 @@ export default function MenulerPage() {
   }
 
   return (
-    <div className="p-8 relative">
+    <div className="p-4 sm:p-6 lg:p-8 relative">
       {showReservationConfirm && pendingReservation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
@@ -285,7 +285,7 @@ export default function MenulerPage() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Haftalık Menü</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Haftalık Menü</h1>
         <p className="text-gray-600">Bu hafta ve gelecek hafta menülerini görüntüleyebilirsiniz</p>
       </div>
 

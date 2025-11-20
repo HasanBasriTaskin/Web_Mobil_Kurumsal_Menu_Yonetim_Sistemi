@@ -69,11 +69,11 @@ export default function YorumModerasyonuPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Kullanıcı Yorumları</h1>
-        <p className="text-gray-600">Menü değerlendirmelerini görüntüleyin</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Kullanıcı Yorumları</h1>
+        <p className="text-sm sm:text-base text-gray-600">Menü değerlendirmelerini görüntüleyin</p>
       </div>
 
       {loading ? (

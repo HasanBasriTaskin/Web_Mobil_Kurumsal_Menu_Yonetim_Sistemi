@@ -108,20 +108,20 @@ export default function GecmisMenulerPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
+      <div className="p-4 sm:p-8 flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Yükleniyor...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-sm sm:text-base text-gray-600">Yükleniyor...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Geçmiş Menüler</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Geçmiş Menüler</h1>
       </div>
 
       {error && (
@@ -132,8 +132,8 @@ export default function GecmisMenulerPage() {
 
       {/* Hafta Butonları */}
       {pastMenus.length > 0 && (
-        <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex gap-3 flex-wrap">
+        <div className="mb-4 sm:mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
+          <div className="flex gap-2 sm:gap-3 flex-wrap">
             {pastMenus.map((weekMenu, index) => {
               const weekNumber = index + 1;
               const isSelected = selectedWeek === weekNumber;
@@ -141,7 +141,7 @@ export default function GecmisMenulerPage() {
                 <button
                   key={weekNumber}
                   onClick={() => setSelectedWeek(weekNumber)}
-                  className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                  className={`px-3 py-1.5 sm:px-6 sm:py-2 text-xs sm:text-sm rounded-lg font-medium transition-colors ${
                     isSelected
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -161,13 +161,13 @@ export default function GecmisMenulerPage() {
           {pastMenus
             .filter((weekMenu, index) => selectedWeek === index + 1)
             .map((weekMenu, weekIndex) => (
-            <div key={weekIndex} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div key={weekIndex} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
               <div className="mb-4 pb-4 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">{weekMenu.week}</h2>
-                <p className="text-sm text-gray-500">{getWeekRange(weekMenu.weekStart)}</p>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">{weekMenu.week}</h2>
+                <p className="text-xs sm:text-sm text-gray-500">{getWeekRange(weekMenu.weekStart)}</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {weekMenu.menus.map((menu) => (
                   <div
                     key={menu.date}

@@ -115,11 +115,11 @@ export default function YemekYonetimiPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Yemek Yönetimi</h1>
-          <p className="text-gray-600">Yemek ekle, düzenle ve sil</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Yemek Yönetimi</h1>
+          <p className="text-sm sm:text-base text-gray-600">Yemek ekle, düzenle ve sil</p>
         </div>
         <button
           onClick={() => handleOpenModal()}

@@ -114,21 +114,21 @@ export default function ProfilPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-screen">
+      <div className="p-4 sm:p-8 flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Yükleniyor...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-sm sm:text-base text-gray-600">Yükleniyor...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Profil</h1>
-        <p className="text-gray-600">Hesap bilgilerinizi ve tercihlerinizi yönetin</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Profil</h1>
+        <p className="text-sm sm:text-base text-gray-600">Hesap bilgilerinizi ve tercihlerinizi yönetin</p>
       </div>
 
       {/* Başarı/Hata Mesajları */}
@@ -158,12 +158,12 @@ export default function ProfilPage() {
       )}
 
       {/* Profil Formu */}
-      <form onSubmit={handleSave} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <form onSubmit={handleSave} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
         {/* Temel Bilgiler */}
-        <div className="mb-8 pb-8 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Temel Bilgiler</h2>
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Temel Bilgiler</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Ad Soyad
@@ -192,18 +192,18 @@ export default function ProfilPage() {
         </div>
 
         {/* Kaydet Butonu */}
-        <div className="flex justify-end gap-4 pt-6">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 sm:pt-6">
           <button
             type="button"
             onClick={() => loadUserProfile()}
-            className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="w-full sm:w-auto px-4 sm:px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
             İptal
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Kaydediliyor...' : 'Kaydet'}
           </button>
