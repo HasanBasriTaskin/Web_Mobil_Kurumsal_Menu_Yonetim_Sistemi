@@ -20,12 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\CorporateMenuManagementSystem.API\CorporateMenuManagementSystem.API.csproj" />
     <ProjectReference Include="..\CorporateMenuManagementSystem.BusinessLayer\CorporateMenuManagementSystem.BusinessLayer.csproj" />
     <ProjectReference Include="..\CorporateMenuManagementSystem.DataAccessLayer\CorporateMenuManagementSystem.DataAccessLayer.csproj" />
     <ProjectReference Include="..\CorporateMenuManagementSystem.EntityLayer\CorporateMenuManagementSystem.EntityLayer.csproj" />
