@@ -17,9 +17,17 @@ export default function GecmisMenulerPage() {
   // Menüler yüklendikten sonra ilk haftayı varsayılan olarak seç
   useEffect(() => {
     if (pastMenus.length > 0 && selectedWeek === null) {
+      console.log('İlk hafta otomatik seçiliyor');
       setSelectedWeek(1);
     }
   }, [pastMenus]);
+
+  // selectedWeek değiştiğinde log at
+  useEffect(() => {
+    if (selectedWeek !== null) {
+      console.log('Seçili hafta:', selectedWeek, '- Toplam hafta sayısı:', pastMenus.length);
+    }
+  }, [selectedWeek, pastMenus]);
 
   // Geçmiş menüleri yükle
   const loadPastMenus = async () => {
@@ -27,59 +35,117 @@ export default function GecmisMenulerPage() {
       setLoading(true);
       setError('');
 
-      // API çağrısı yapılacak
-      // const response = await apiClient.get(`/menu/past?month=${selectedMonth}`);
-      // setPastMenus(response.data.data || []);
-
-      // Mock data (API hazır olduğunda yukarıdaki satırları kullan)
-      setTimeout(() => {
-        const today = new Date();
-        const mockMenus = [];
-
-        // Son 4 haftanın menülerini oluştur (Hafta 1 = en eski, Hafta 4 = en yeni)
-        for (let week = 1; week <= 4; week++) {
-          const weekStart = new Date(today);
-          // Ters sıralama: Hafta 1 en eski olacak şekilde
-          const weeksAgo = (5 - week); // week=1 → 4 hafta önce, week=4 → 1 hafta önce
-          weekStart.setDate(today.getDate() - (weeksAgo * 7));
-          const dayOfWeek = weekStart.getDay();
-          const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-          const monday = new Date(weekStart);
-          monday.setDate(weekStart.getDate() + diff);
-
-          const weekMenus = [];
-          // Sadece Pazartesi - Cumartesi (6 gün)
-          for (let i = 0; i < 6; i++) {
-            const date = new Date(monday);
-            date.setDate(monday.getDate() + i);
-            const dateStr = date.toISOString().split('T')[0];
-
-            weekMenus.push({
-              date: dateStr,
-              soup: ['Ezogelin', 'Mercimek', 'Domates', 'Tarhana', 'Yayla', 'Düğün'][i],
-              mainCourse: ['Hünkar Beğendi', 'Izgara Köfte', 'Tavuk Şinitzel', 'Kuru Fasulye', 'Rosto', 'Yemek'][i],
-              sideDish: ['Pilav', 'Makarna', 'Bulgur', 'Salata', 'Zeytinyağlı', 'Yan Yemek'][i],
-              dessert: ['Kazan Dibi', 'Sütlaç', 'Baklava', 'Tulumba', 'Revani', 'Tatlı'][i],
-              calories: 1000 + Math.floor(Math.random() * 300),
-              averageRating: (3 + Math.random() * 2).toFixed(1),
-              totalReviews: Math.floor(Math.random() * 50) + 10
-            });
-          }
-
-          mockMenus.push({
-            week: `Hafta ${week}`,
-            weekStart: monday.toISOString().split('T')[0],
-            menus: weekMenus
-          });
-        }
-
-        setPastMenus(mockMenus);
+      // API çağrısı - 4 haftalık geçmiş menüleri getir
+      const response = await apiClient.get('/menu/past?weeks=4');
+      console.log('API Response:', response.data);
+      
+      if (response.data.success && response.data.data) {
+        // API'den gelen menüleri haftalara göre grupla
+        const menusData = response.data.data;
+        console.log('Menü sayısı:', menusData.length);
+        const groupedByWeek = groupMenusByWeek(menusData);
+        console.log('Gruplanan hafta sayısı:', groupedByWeek.length);
+        setPastMenus(groupedByWeek);
         setLoading(false);
-      }, 500);
+      } else {
+        console.warn('API başarısız veya veri yok');
+        setPastMenus([]);
+        setLoading(false);
+      }
     } catch (err) {
+      console.error('Past menus loading error:', err);
       setError('Geçmiş menüler yüklenirken bir hata oluştu.');
+      setPastMenus([]);
       setLoading(false);
     }
+  };
+
+  // Menüleri haftalara göre grupla - sadece tamamen bitmiş haftaları dahil et
+  const groupMenusByWeek = (menus) => {
+    if (!menus || menus.length === 0) return [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Bugünün başlangıcı
+    
+    // Bu haftanın Pazartesini bul
+    const currentWeekMonday = getMonday(today);
+
+    // Tarihe göre sırala (en eski -> en yeni)
+    const sortedMenus = [...menus].sort((a, b) => 
+      new Date(a.menuDate) - new Date(b.menuDate)
+    );
+
+    // Sadece tamamen bitmiş haftaları al (bu haftadan önceki haftalar)
+    const pastMenus = sortedMenus.filter(menu => {
+      const menuDate = new Date(menu.menuDate);
+      const menuWeekMonday = getMonday(menuDate);
+      // Menü bu haftadan önceki bir haftaya ait olmalı
+      return menuWeekMonday.getTime() < currentWeekMonday.getTime();
+    });
+
+    if (pastMenus.length === 0) return [];
+
+    // Haftaya göre grupla
+    const weeks = [];
+    let currentWeekMenus = [];
+    let currentWeekStart = null;
+
+    pastMenus.forEach((menu) => {
+      const menuDate = new Date(menu.menuDate);
+      const weekStart = getMonday(menuDate);
+      
+      if (!currentWeekStart || weekStart.getTime() !== currentWeekStart.getTime()) {
+        // Yeni hafta başladı
+        if (currentWeekMenus.length > 0) {
+          weeks.push({
+            week: `Hafta ${weeks.length + 1}`,
+            weekStart: currentWeekStart.toISOString().split('T')[0],
+            menus: currentWeekMenus.map(m => ({
+              date: m.menuDate,
+              soup: m.soup,
+              mainCourse: m.mainCourse,
+              sideDish: m.sideDish,
+              dessert: m.dessert,
+              calories: m.calories,
+              averageRating: m.averageRating > 0 ? m.averageRating.toFixed(1) : null,
+              totalReviews: m.totalReviews
+            }))
+          });
+        }
+        currentWeekStart = weekStart;
+        currentWeekMenus = [menu];
+      } else {
+        currentWeekMenus.push(menu);
+      }
+    });
+
+    // Son haftayı ekle
+    if (currentWeekMenus.length > 0) {
+      weeks.push({
+        week: `Hafta ${weeks.length + 1}`,
+        weekStart: currentWeekStart.toISOString().split('T')[0],
+        menus: currentWeekMenus.map(m => ({
+          date: m.menuDate,
+          soup: m.soup,
+          mainCourse: m.mainCourse,
+          sideDish: m.sideDish,
+          dessert: m.dessert,
+          calories: m.calories,
+          averageRating: m.averageRating > 0 ? m.averageRating.toFixed(1) : null,
+          totalReviews: m.totalReviews
+        }))
+      });
+    }
+
+    return weeks;
+  };
+
+  // Haftanın Pazartesini bul
+  const getMonday = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Pazar ise 6 gün geriye git
+    return new Date(d.setDate(diff));
   };
 
   // Tarihi Türkçe formatında göster
@@ -140,7 +206,10 @@ export default function GecmisMenulerPage() {
               return (
                 <button
                   key={weekNumber}
-                  onClick={() => setSelectedWeek(weekNumber)}
+                  onClick={() => {
+                    console.log('Hafta değiştiriliyor:', weekNumber);
+                    setSelectedWeek(weekNumber);
+                  }}
                   className={`px-3 py-1.5 sm:px-6 sm:py-2 text-xs sm:text-sm rounded-lg font-medium transition-colors ${
                     isSelected
                       ? 'bg-blue-600 text-white'

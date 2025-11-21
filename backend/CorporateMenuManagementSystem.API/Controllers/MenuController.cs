@@ -33,6 +33,14 @@ namespace CorporateMenuManagementSystem.API.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
+        // GET: api/menu/past
+        [HttpGet("menu/past")]
+        public async Task<IActionResult> GetPastMenus([FromQuery] int weeks = 4)
+        {
+            var result = await _menuService.GetPastMenusAsync(weeks);
+            return StatusCode(result.StatusCode, result);
+        }
+
         // GET: api/menu/{id}
         [HttpGet("admin/menu/{id}")]
         [Authorize(Roles = "Admin")]

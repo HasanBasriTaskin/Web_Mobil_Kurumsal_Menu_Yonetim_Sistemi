@@ -11,5 +11,6 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Abstract
         Task<Menu> GetMenuByDateWithRelationsAsync(DateTime date);
         Task<List<Menu>> GetTopRatedMenusAsync(int count);
         Task<List<Menu>> GetMenusByDateRangeAsync(DateTime startDate, DateTime endDate);
+        Task<List<Menu>> GetPastMenusWithFeedbackAsync(int weeksBack);
     }
 }

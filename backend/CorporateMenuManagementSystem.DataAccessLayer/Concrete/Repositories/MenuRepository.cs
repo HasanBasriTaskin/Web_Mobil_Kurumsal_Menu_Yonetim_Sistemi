@@ -65,5 +65,17 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
 
             return sortedMenus;
         }
+
+        public async Task<List<Menu>> GetPastMenusWithFeedbackAsync(int weeksBack)
+        {
+            var today = DateTime.Today;
+            var startDate = today.AddDays(-weeksBack * 7);
+
+            return await _context.Menus
+                .Include(m => m.Feedbacks)
+                .Where(m => m.MenuDate.Date >= startDate.Date && m.MenuDate.Date < today.Date)
+                .OrderBy(m => m.MenuDate)
+                .ToListAsync();
+        }
     }
 }

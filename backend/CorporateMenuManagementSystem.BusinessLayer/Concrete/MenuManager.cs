@@ -148,5 +148,33 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 
             return Response<List<MenuDto>>.Success(menuDtos, 200);
         }
+
+        public async Task<Response<List<MenuWithFeedbackDto>>> GetPastMenusAsync(int weeksBack = 4)
+        {
+            var pastMenus = await _menuRepository.GetPastMenusWithFeedbackAsync(weeksBack);
+
+            if (pastMenus == null || !pastMenus.Any())
+            {
+                return Response<List<MenuWithFeedbackDto>>.Fail(
+                    new ErrorDetail("NotFound", "Geçmiş menü bulunamadı."), 404);
+            }
+
+            var menuWithFeedbackDtos = pastMenus.Select(menu => new MenuWithFeedbackDto
+            {
+                Id = menu.Id,
+                MenuDate = menu.MenuDate,
+                Soup = menu.Soup,
+                MainCourse = menu.MainCourse,
+                SideDish = menu.SideDish,
+                Dessert = menu.Dessert,
+                Calories = menu.Calories,
+                AverageRating = menu.Feedbacks != null && menu.Feedbacks.Any()
+                    ? menu.Feedbacks.Average(f => (double)f.Star)
+                    : 0,
+                TotalReviews = menu.Feedbacks?.Count ?? 0
+            }).ToList();
+
+            return Response<List<MenuWithFeedbackDto>>.Success(menuWithFeedbackDtos, 200);
+        }
     }
 }
