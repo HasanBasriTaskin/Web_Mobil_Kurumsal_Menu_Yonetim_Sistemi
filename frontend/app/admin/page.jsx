@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { menuAPI, feedbackAPI, surveyAPI } from '@/services/api';
+import { adminDashboardAPI } from '@/services/api';
 
 export default function AdminPage() {
   const [stats, setStats] = useState({
@@ -10,8 +10,13 @@ export default function AdminPage() {
     activeMenus: 0,
     pendingComments: 0,
     activeVotings: 0,
+    todayReservations: 0,
+    tomorrowReservations: 0,
+    thisWeekReservations: 0,
+    averageRating: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadDashboardStats();
@@ -20,63 +25,30 @@ export default function AdminPage() {
   const loadDashboardStats = async () => {
     try {
       setLoading(true);
-      
-      // Menüleri yükle
-      let totalMenus = 0;
-      let activeMenus = 0;
-      
-      try {
-        const currentWeek = await menuAPI.getWeekly('current');
-        if (currentWeek.data) {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          totalMenus += currentWeek.data.length;
-          activeMenus += currentWeek.data.filter(menu => new Date(menu.menuDate) >= today).length;
-        }
-      } catch (err) {
-        // Current week menü yoksa sessizce devam et
-      }
-      
-      try {
-        const nextWeek = await menuAPI.getWeekly('next');
-        if (nextWeek.data) {
-          totalMenus += nextWeek.data.length;
-          activeMenus += nextWeek.data.length; // Gelecek haftanın tüm menüleri aktif
-        }
-      } catch (err) {
-        // Next week menü yoksa sessizce devam et
-      }
+      setError('');
 
-      // Yorumları yükle
-      let commentsCount = 0;
-      try {
-        const feedbackResponse = await feedbackAPI.getAll();
-        if (feedbackResponse.isSuccessful && feedbackResponse.data) {
-          commentsCount = feedbackResponse.data.length;
-        }
-      } catch (err) {
-        // Yorum yoksa 0 olarak kalacak
-      }
+      const response = await adminDashboardAPI.getSummary();
+      console.log('Dashboard API Response:', response);
 
-      // Aktif anketi kontrol et
-      let activeVotingsCount = 0;
-      try {
-        const surveyResponse = await surveyAPI.getActive();
-        if (surveyResponse.isSuccessful && surveyResponse.data) {
-          activeVotingsCount = 1;
-        }
-      } catch (err) {
-        // Aktif anket yoksa 0 olarak kalacak
+      if (response.success && response.data) {
+        const data = response.data;
+        
+        setStats({
+          totalMeals: data.menus?.total || 0,
+          activeMenus: data.menus?.active || 0,
+          pendingComments: data.feedback?.total || 0,
+          activeVotings: data.surveys?.activeCount || 0,
+          todayReservations: data.reservations?.today || 0,
+          tomorrowReservations: data.reservations?.tomorrow || 0,
+          thisWeekReservations: data.reservations?.thisWeek || 0,
+          averageRating: data.feedback?.averageRating || 0,
+        });
+      } else {
+        setError('Dashboard verileri yüklenemedi.');
       }
-
-      setStats({
-        totalMeals: totalMenus,
-        activeMenus: activeMenus,
-        pendingComments: commentsCount,
-        activeVotings: activeVotingsCount,
-      });
     } catch (error) {
       console.error('Dashboard istatistikleri yüklenemedi:', error);
+      setError('Dashboard verileri yüklenirken bir hata oluştu.');
     } finally {
       setLoading(false);
     }
@@ -100,6 +72,12 @@ export default function AdminPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Ana Sayfa</h1>
         <p className="text-gray-600">Yemekhane menü yönetim sistemi yönetici paneli</p>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
 
       {/* Özet Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -158,6 +136,54 @@ export default function AdminPage() {
             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rezervasyon Kartları */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Bugün Rezervasyonlar */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-2">Bugünün Rezervasyonları</p>
+              <p className="text-4xl font-bold text-green-600">{stats.todayReservations}</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Yarın Rezervasyonlar */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-2">Yarının Rezervasyonları</p>
+              <p className="text-4xl font-bold text-blue-600">{stats.tomorrowReservations}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Bu Hafta Toplam */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-2">Bu Hafta Toplam</p>
+              <p className="text-4xl font-bold text-purple-600">{stats.thisWeekReservations}</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
           </div>

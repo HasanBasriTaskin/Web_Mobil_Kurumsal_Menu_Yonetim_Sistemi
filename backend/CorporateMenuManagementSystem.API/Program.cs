@@ -48,6 +48,7 @@ builder.Services.AddScoped<IReservationService, ReservationManager>();
 builder.Services.AddScoped<IProfileService, ProfileManager>();
 builder.Services.AddScoped<ISurveyService, SurveyManager>();
 builder.Services.AddScoped<IAdminSurveyService, AdminSurveyManager>();
+builder.Services.AddScoped<IAdminDashboardService, AdminDashboardManager>();
 
 
 // JWT Authentication Yapılandırması

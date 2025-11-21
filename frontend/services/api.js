@@ -386,4 +386,13 @@ export const surveyAPI = {
   }
 };
 
+// Admin Dashboard API Functions
+export const adminDashboardAPI = {
+  // Admin - Dashboard özetini getir
+  getSummary: async () => {
+    const response = await apiClient.get('/admin/dashboard/summary');
+    return response.data;
+  }
+};
+
 export default apiClient;
