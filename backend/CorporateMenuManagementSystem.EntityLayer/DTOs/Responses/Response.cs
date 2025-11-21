@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Responses
 {
     public class Response<T>
@@ -26,7 +24,7 @@ namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Responses
             Data = default,
             Errors = errors
         };
-         public static Response<T> Fail(ErrorDetail error, int statusCode = 400) => new()
+        public static Response<T> Fail(ErrorDetail error, int statusCode = 400) => new()
         {
             IsSuccessful = false,
             StatusCode = statusCode,

@@ -1,11 +1,6 @@
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic; // Added missing import
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder
 {
@@ -39,7 +34,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder
                         LastName = adminUserConfig["LastName"],
                         UserName = adminUserConfig["UserName"],
                         Email = email,
-                        EmailConfirmed = true 
+                        EmailConfirmed = true
                     };
 
                     var result = await userManager.CreateAsync(adminUser, adminUserConfig["Password"]);

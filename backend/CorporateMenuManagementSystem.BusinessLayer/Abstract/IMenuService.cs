@@ -1,8 +1,5 @@
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Menu;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {
@@ -10,6 +7,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
     {
         Task<Response<MenuDto>> GetMenuByIdAsync(int id);
         Task<Response<MenuDto>> GetMenuByDateWithRelationsAsync(DateTime date);
+        Task<Response<List<MenuDto>>> GetAllMenusAsync();
         Task<Response<List<MenuDto>>> GetTopRatedMenusAsync(int count);
         Task<Response<MenuDto>> CreateMenuAsync(CreateMenuDto createMenuDto);
         Task<Response<MenuDto>> UpdateMenuAsync(int menuId, UpdateMenuDto updateMenuDto);

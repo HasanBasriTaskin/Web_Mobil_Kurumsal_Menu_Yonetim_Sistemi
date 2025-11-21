@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback
 {
     public class FeedbackSummaryDto

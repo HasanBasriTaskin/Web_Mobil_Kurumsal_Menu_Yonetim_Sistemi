@@ -1,6 +1,5 @@
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Profile;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {

@@ -1,12 +1,9 @@
 using AutoMapper;
 using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
-using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Notification;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using CorporateMenuManagementSystem.EntityLayer.Entitites;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {

@@ -1,5 +1,3 @@
-using System;
-
 namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Notification
 {
     public class NotificationDto

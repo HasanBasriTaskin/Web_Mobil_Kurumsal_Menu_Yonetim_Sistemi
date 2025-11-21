@@ -1,5 +1,4 @@
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Abstract
 {

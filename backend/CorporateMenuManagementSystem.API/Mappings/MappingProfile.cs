@@ -1,12 +1,12 @@
 using AutoMapper;
-using CorporateMenuManagementSystem.EntityLayer.DTOs.Menu;
-using CorporateMenuManagementSystem.EntityLayer.Entitites;
-using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
-using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Auth;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Menu;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Notification;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Profile;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
+using CorporateMenuManagementSystem.EntityLayer.Entitites;
 
 namespace CorporateMenuManagementSystem.API.Mappings
 {
@@ -26,19 +26,19 @@ namespace CorporateMenuManagementSystem.API.Mappings
                 .ForMember(dest => dest.UserLastName, opt => opt.MapFrom(src => src.AppUser.LastName))
                 .ForMember(dest => dest.MenuDate, opt => opt.MapFrom(src => src.Menu.MenuDate))
                 .ForMember(dest => dest.MainCourse, opt => opt.MapFrom(src => src.Menu.MainCourse));
-        
+
             // Feedback Mappings - Rating/Star field mapping düzeltmesi
             CreateMap<CreateFeedbackDto, Feedback>()
                 .ForMember(dest => dest.Star, opt => opt.MapFrom(src => (byte)src.Rating));
-            
+
             CreateMap<UpdateFeedbackDto, Feedback>()
                 .ForMember(dest => dest.Star, opt => opt.MapFrom(src => (byte)src.Rating));
-            
+
             CreateMap<Feedback, FeedbackDto>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.AppUserId))
                 .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => (int)src.Star))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedDate));
-            
+
             CreateMap<Feedback, AdminFeedbackDto>()
                 .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => (int)src.Star))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedDate));

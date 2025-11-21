@@ -1,7 +1,5 @@
 using Bogus;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
-using System;
-using System.Collections.Generic;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.DataSeeder.Fakers
 {

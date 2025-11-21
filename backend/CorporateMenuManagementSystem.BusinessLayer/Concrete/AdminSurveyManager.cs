@@ -1,11 +1,14 @@
 using AutoMapper;
 using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
-using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
+<<<<<<< HEAD
 using System;
 using System.Threading.Tasks;
+=======
+>>>>>>> d7d78a2819fd570a883059cf4c75608d05be4400
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {

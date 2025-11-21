@@ -2,9 +2,12 @@ using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
 using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Microsoft.EntityFrameworkCore;
+<<<<<<< HEAD
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+=======
+>>>>>>> d7d78a2819fd570a883059cf4c75608d05be4400
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
 {

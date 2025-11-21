@@ -2,7 +2,6 @@ using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.API.Controllers
 {

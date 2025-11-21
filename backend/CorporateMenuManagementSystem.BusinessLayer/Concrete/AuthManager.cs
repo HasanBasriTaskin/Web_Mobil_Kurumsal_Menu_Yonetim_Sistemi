@@ -4,8 +4,6 @@ using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using System.Linq;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {
@@ -98,7 +96,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 
             // TODO: E-posta gönderme servisi entegre edilecek.
             Console.WriteLine($"Password Reset Token for {user.Email}: {encodedToken}");
-            
+
             return Response<NoContentDto>.Success(new NoContentDto(), 200);
         }
 

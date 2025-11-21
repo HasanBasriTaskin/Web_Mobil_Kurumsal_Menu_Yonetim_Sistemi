@@ -3,8 +3,6 @@ using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Profile;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using CorporateMenuManagementSystem.EntityLayer.Entitites;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {

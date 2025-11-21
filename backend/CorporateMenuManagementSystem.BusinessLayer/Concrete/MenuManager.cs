@@ -4,10 +4,6 @@ using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Menu;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {
@@ -39,7 +35,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 
             var newMenu = _mapper.Map<Menu>(createMenuDto);
             await _menuRepository.AddAsync(newMenu);
-            
+
             var menuDto = _mapper.Map<MenuDto>(newMenu);
             return Response<MenuDto>.Success(menuDto, 201);
         }
@@ -87,6 +83,21 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             return Response<MenuDto>.Success(menuDto, 200);
         }
 
+        public async Task<Response<List<MenuDto>>> GetAllMenusAsync()
+        {
+            var menus = await _menuRepository.GetAllAsync();
+            
+            if (menus == null || !menus.Any())
+            {
+                return Response<List<MenuDto>>.Success(new List<MenuDto>(), 200);
+            }
+
+            // Tarihe göre sırala (en yeni en üstte)
+            var sortedMenus = menus.OrderByDescending(m => m.MenuDate).ToList();
+            var menuDtos = _mapper.Map<List<MenuDto>>(sortedMenus);
+            return Response<List<MenuDto>>.Success(menuDtos, 200);
+        }
+
         public async Task<Response<List<MenuDto>>> GetTopRatedMenusAsync(int count)
         {
             var menus = await _menuRepository.GetTopRatedMenusAsync(count);
@@ -104,7 +115,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 
             _mapper.Map(updateMenuDto, existingMenu);
             await _menuRepository.UpdateAsync(existingMenu);
-            
+
             var updatedMenuDto = _mapper.Map<MenuDto>(existingMenu);
             return Response<MenuDto>.Success(updatedMenuDto, 200);
         }
@@ -112,7 +123,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
         public async Task<Response<List<MenuDto>>> GetWeeklyMenusAsync(string week)
         {
             var today = DateTime.Today;
-            
+
             // Haftanın başlangıcı olan Pazartesi gününü bulmak için bugünden geriye doğru say.
             var currentWeekStartDate = today;
             while (currentWeekStartDate.DayOfWeek != DayOfWeek.Monday)
@@ -133,13 +144,13 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             {
                 startDate = currentWeekStartDate;
             }
-            
+
             // Haftanın bitiş tarihini (Pazar) hesapla.
             var endDate = startDate.AddDays(6);
 
             var menus = await _menuRepository.GetMenusByDateRangeAsync(startDate, endDate);
 
-            if(menus == null || !menus.Any())
+            if (menus == null || !menus.Any())
             {
                 return Response<List<MenuDto>>.Fail(new ErrorDetail("Not Found", "Bu hafta için bir menü planı bulunamadı."), 404);
             }

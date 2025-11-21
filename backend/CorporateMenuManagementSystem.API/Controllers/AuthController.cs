@@ -1,7 +1,6 @@
 using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Auth;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.API.Controllers
 {

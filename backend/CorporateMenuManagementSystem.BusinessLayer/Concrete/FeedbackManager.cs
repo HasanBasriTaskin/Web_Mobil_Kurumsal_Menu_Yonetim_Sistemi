@@ -4,10 +4,6 @@ using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {
@@ -112,9 +108,9 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             {
                 return Response<FeedbackSummaryDto>.Success(new FeedbackSummaryDto
                 {
-                    MenuId = menuId, 
-                    AverageRating = 0, 
-                    TotalReviews = 0, 
+                    MenuId = menuId,
+                    AverageRating = 0,
+                    TotalReviews = 0,
                     Comments = new List<FeedbackCommentDto>()
                 }, 200);
             }
@@ -149,11 +145,11 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
                 return $"{(int)diff.TotalHours} saat önce";
             if (diff.TotalDays < 7)
                 return $"{(int)diff.TotalDays} gün önce";
-            
+
             // 7 günden eski ise sadece saati göster
             return createdDate.ToLocalTime().ToString("HH:mm");
         }
-        
+
         public async Task<Response<FeedbackDto>> UpdateFeedbackAsync(int feedbackId, UpdateFeedbackDto updateFeedbackDto, string userId)
         {
             // 1. Feedback var mı ve kullanıcının kendi feedback'i mi kontrolü

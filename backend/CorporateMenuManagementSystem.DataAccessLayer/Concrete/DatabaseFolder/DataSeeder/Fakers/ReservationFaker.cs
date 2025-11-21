@@ -1,8 +1,6 @@
 using Bogus;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using CorporateMenuManagementSystem.EntityLayer.Enums;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.DataSeeder.Fakers
 {

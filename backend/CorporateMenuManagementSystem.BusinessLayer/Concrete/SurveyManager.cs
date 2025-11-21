@@ -1,11 +1,14 @@
 using AutoMapper;
 using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
-using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
+<<<<<<< HEAD
 using System;
 using System.Threading.Tasks;
+=======
+>>>>>>> d7d78a2819fd570a883059cf4c75608d05be4400
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {
@@ -25,14 +28,14 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
         public async Task<Response<SurveyDto>> GetActiveSurveyAsync(string userId)
         {
             var activeSurvey = await _surveyRepository.GetActiveSurveyAsync();
-            
+
             if (activeSurvey == null)
             {
                 return Response<SurveyDto>.Fail(new ErrorDetail("Survey", "Şu anda aktif bir anket bulunmamaktadır."), 404);
             }
 
             var surveyDto = _mapper.Map<SurveyDto>(activeSurvey);
-            
+
             // Kullanıcının bu ankete cevap verip vermediğini kontrol et
             surveyDto.HasUserResponded = await _surveyRepository.HasUserRespondedAsync(activeSurvey.Id, userId);
 

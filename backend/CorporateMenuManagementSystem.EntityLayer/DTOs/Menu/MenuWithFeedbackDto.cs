@@ -1,5 +1,3 @@
-using System;
-
 namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Menu
 {
     public class MenuWithFeedbackDto

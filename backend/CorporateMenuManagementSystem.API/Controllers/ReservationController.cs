@@ -2,9 +2,7 @@ using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.API.Controllers
 {
@@ -69,7 +67,7 @@ namespace CorporateMenuManagementSystem.API.Controllers
             var todayCount = await _reservationService.GetTotalReservationsCountByDateAsync(DateTime.Now);
             var tomorrowCount = await _reservationService.GetTotalReservationsCountByDateAsync(DateTime.Now.AddDays(1));
 
-            return Ok(new 
+            return Ok(new
             {
                 TodayReservationCount = todayCount.Data,
                 TomorrowReservationCount = tomorrowCount.Data

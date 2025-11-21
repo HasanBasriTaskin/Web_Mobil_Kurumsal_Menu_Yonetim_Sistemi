@@ -4,10 +4,6 @@ using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
 {
@@ -47,7 +43,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             newReservation.AppUserId = userId;
 
             await _reservationRepository.AddAsync(newReservation);
-            
+
             var reservationWithRelations = await _reservationRepository.GetByIdWithRelationsAsync(newReservation.Id);
             var reservationDto = _mapper.Map<ReservationDto>(reservationWithRelations);
 
