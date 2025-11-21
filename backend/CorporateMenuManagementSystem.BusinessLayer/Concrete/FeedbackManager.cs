@@ -26,8 +26,6 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             _mapper = mapper;
         }
 
-        // --- IFeedbackService Arayüzünün Doğru Implementasyonu ---
-
         public async Task<Response<FeedbackDto>> SubmitFeedbackAsync(CreateFeedbackDto createFeedbackDto, string userId)
         {
             // 1. Menü var mı kontrolü
@@ -37,8 +35,7 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
                 return Response<FeedbackDto>.Fail(new ErrorDetail("MenuNotFound", "Belirtilen menü bulunamadı."), 404);
             }
 
-            // 2. Menü tarihi geçmiş mi kontrolü (yemek yendikten sonra feedback verilebilir)
-            if (menu.MenuDate.Date >= DateTime.Now.Date)
+            if (menu.MenuDate >= DateTime.Now)
             {
                 return Response<FeedbackDto>.Fail(new ErrorDetail("MenuNotPast", "Henüz yenmemiş bir menü için geri bildirim verilemez."), 400);
             }
