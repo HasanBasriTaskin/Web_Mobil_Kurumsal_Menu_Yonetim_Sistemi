@@ -10,6 +10,25 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // 204 No Content response'ları için boş body'yi kabul et
+  validateStatus: function (status) {
+    return status >= 200 && status < 300; // default
+  },
+  transformResponse: [function (data, headers) {
+    // 204 No Content için boş response'u handle et
+    if (!data) {
+      return null;
+    }
+    // JSON parse et
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        return data;
+      }
+    }
+    return data;
+  }]
 });
 
 // Request interceptor to add auth token
@@ -29,6 +48,19 @@ apiClient.interceptors.request.use(
 // Response interceptor for error handling and format normalization
 apiClient.interceptors.response.use(
   (response) => {
+    // 204 No Content veya boş response body - Silme işlemleri için özel handling
+    if (response.status === 204 || !response.data) {
+      response.data = {
+        success: true,
+        isSuccessful: true,
+        data: null,
+        message: 'İşlem başarılı',
+        errors: null,
+        statusCode: response.status || 204
+      };
+      return response;
+    }
+
     // Backend response formatını normalize et
     // Backend: { isSuccessful, statusCode, data, errors }
     // Frontend beklentisi: { success, data, message }
@@ -38,6 +70,7 @@ apiClient.interceptors.response.use(
       // Backend formatını frontend formatına dönüştür
       const normalizedResponse = {
         success: backendResponse.isSuccessful ?? backendResponse.success ?? true,
+        isSuccessful: backendResponse.isSuccessful ?? backendResponse.success ?? true,
         data: backendResponse.data,
         message: backendResponse.message || '',
         errors: backendResponse.errors || null,
@@ -230,8 +263,22 @@ export const menuAPI = {
 
   // DELETE /api/admin/menu/{id} - Menüyü sil (Admin)
   delete: async (id, force = false) => {
-    const response = await apiClient.delete(`/admin/menu/${id}?force=${force}`);
-    return response.data;
+    try {
+      const response = await apiClient.delete(`/admin/menu/${id}?force=${force}`);
+      return response.data;
+    } catch (error) {
+      // 204 No Content response'ları bazen error olarak yakalanabiliyor
+      if (error.response?.status === 204 || error.request?.status === 204) {
+        return {
+          success: true,
+          isSuccessful: true,
+          statusCode: 204,
+          data: null,
+          message: 'Menü başarıyla silindi'
+        };
+      }
+      throw error;
+    }
   },
 };
 

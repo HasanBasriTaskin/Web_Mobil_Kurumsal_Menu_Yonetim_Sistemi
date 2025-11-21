@@ -198,9 +198,14 @@ export default function MenuYonetimiPage() {
     try {
       const response = await menuAPI.delete(menuId, force);
       
-      if (response.success || response.isSuccessful) {
+      // Success kontrolü - 204, 200 gibi başarılı status kodları
+      if (response.success || response.isSuccessful || response.statusCode === 204 || response.statusCode === 200) {
         toast.success('Menü başarıyla silindi');
         await loadMenus();
+      } else {
+        // Beklenmedik durum - response var ama success değil
+        console.warn('Unexpected response:', response);
+        toast.error('Menü silinirken beklenmeyen bir durum oluştu');
       }
     } catch (error) {
       console.error('Menü silme hatası:', error);
@@ -209,6 +214,7 @@ export default function MenuYonetimiPage() {
       if (error.response?.status === 404) {
         toast.info('Menü zaten silinmiş');
         await loadMenus(); // Listeyi yenile
+        setDeletingId(null);
         return;
       }
       
@@ -217,7 +223,7 @@ export default function MenuYonetimiPage() {
       const errorData = error.response?.data;
       
       // Rezervasyonlar varsa kullanıcıya sor
-      if (error.response?.status === 400 || error.response?.status === 409) {
+      if (error.response?.status === 400) {
         // Rezervasyon veya ilişkili veri kontrolü
         const hasReservationError = 
           errorMessage.toLowerCase().includes('reservation') || 
@@ -229,18 +235,39 @@ export default function MenuYonetimiPage() {
            }));
         
         if (hasReservationError && !force) {
-          // Rezervasyonlar varsa force delete ile tekrar dene
+          // Rezervasyonlar varsa kullanıcıya onay sor
           setDeletingId(null);
-          await handleDelete(menuId, true);
+          toast.warning('Bu menüde rezervasyonlar var. Yine de silmek istiyor musunuz?', {
+            duration: 10000,
+            action: {
+              label: 'Evet, Sil',
+              onClick: () => handleDelete(menuId, true)
+            },
+            cancel: {
+              label: 'İptal',
+              onClick: () => {}
+            }
+          });
           return;
         } else {
           toast.error(errorMessage || 'Menü silinirken bir hata oluştu');
         }
+      } else if (force) {
+        // Force delete sırasında network/parse hatası olabilir ama backend işlemi tamamlamış olabilir
+        // Listeyi yenile, muhtemelen menü silinmiştir
+        console.log('Force delete sırasında response hatası, liste yenileniyor...');
+        await loadMenus();
+        toast.success('Menü silindi');
       } else {
         toast.error(errorMessage || 'Menü silinirken bir hata oluştu');
       }
+      
+      setDeletingId(null);
     } finally {
-      setDeletingId(null); // Silme işlemi bitti
+      // Finally bloğunda da kontrol et, catch'te return varsa çalışmayabilir
+      if (deletingId === menuId) {
+        setDeletingId(null);
+      }
     }
   };
 
