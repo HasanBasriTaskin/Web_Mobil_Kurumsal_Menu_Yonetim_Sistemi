@@ -2,6 +2,8 @@ using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
 using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories
