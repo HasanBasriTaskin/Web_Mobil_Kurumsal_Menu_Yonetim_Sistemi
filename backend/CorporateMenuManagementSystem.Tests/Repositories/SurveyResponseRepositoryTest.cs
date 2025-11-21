@@ -250,7 +250,7 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             
             var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com", FirstName = "User", LastName = "One" };
             var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com", FirstName = "User", LastName = "Two" };
-            var user3 = new AppUser { Id = "user3", UserName = "user3", Email = "user3@test.com" };
+            var user3 = new AppUser { Id = "user3", UserName = "user3", Email = "user3@test.com", FirstName = "User", LastName = "Three" };
             _context.Users.Add(user1);
             _context.Users.Add(user2);
             _context.Users.Add(user3);
@@ -282,7 +282,7 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             
             var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com", FirstName = "User", LastName = "One" };
             var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com", FirstName = "User", LastName = "Two" };
-            var user3 = new AppUser { Id = "user3", UserName = "user3", Email = "user3@test.com" };
+            var user3 = new AppUser { Id = "user3", UserName = "user3", Email = "user3@test.com", FirstName = "User", LastName = "Three" };
             _context.Users.Add(user1);
             _context.Users.Add(user2);
             _context.Users.Add(user3);

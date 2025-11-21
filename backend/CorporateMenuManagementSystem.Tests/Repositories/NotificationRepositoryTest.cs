@@ -317,8 +317,8 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
         public async Task MarkSpecificAsReadAsync_WhenNotificationBelongsToDifferentUser_ShouldNotMark()
         {
             // Arrange
-            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com" };
-            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com" };
+            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com", FirstName = "User", LastName = "One" };
+            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com", FirstName = "User", LastName = "Two" };
             _context.Users.Add(user1);
             _context.Users.Add(user2);
             await _context.SaveChangesAsync();
