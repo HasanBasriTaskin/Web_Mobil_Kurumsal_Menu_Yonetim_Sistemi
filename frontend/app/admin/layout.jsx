@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 const navigation = [
   { 
@@ -74,6 +75,7 @@ export default function AdminLayout({ children }) {
   };
 
   return (
+    <ProtectedRoute requiredRole="Admin">
     <div className="flex min-h-screen bg-gray-50">
       {/* Mobile Overlay */}
       {sidebarOpen && (
@@ -194,6 +196,7 @@ export default function AdminLayout({ children }) {
         </div>
       </main>
     </div>
+    </ProtectedRoute>
   );
 }
 
