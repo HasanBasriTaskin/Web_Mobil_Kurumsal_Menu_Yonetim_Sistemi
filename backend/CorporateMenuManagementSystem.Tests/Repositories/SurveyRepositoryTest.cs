@@ -68,7 +68,9 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -105,7 +107,9 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -204,7 +208,9 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();

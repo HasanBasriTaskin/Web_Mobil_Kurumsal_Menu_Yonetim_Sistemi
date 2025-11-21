@@ -52,7 +52,9 @@ namespace CorporateMenuManagementSystem.Tests.Services
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             var roles = new List<string> { "User" };
 
@@ -77,7 +79,9 @@ namespace CorporateMenuManagementSystem.Tests.Services
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             var roles = new List<string> { "User", "Admin" };
 
@@ -101,7 +105,9 @@ namespace CorporateMenuManagementSystem.Tests.Services
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             var roles = new List<string>();
 
@@ -125,7 +131,9 @@ namespace CorporateMenuManagementSystem.Tests.Services
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             var roles = new List<string> { "User" };
 

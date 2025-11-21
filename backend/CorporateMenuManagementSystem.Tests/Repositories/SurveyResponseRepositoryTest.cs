@@ -35,7 +35,9 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -69,8 +71,8 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             };
             _context.Surveys.Add(survey);
             
-            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com" };
-            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com" };
+            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com", FirstName = "User", LastName = "One" };
+            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com", FirstName = "User", LastName = "Two" };
             _context.Users.Add(user1);
             _context.Users.Add(user2);
             await _context.SaveChangesAsync();
@@ -98,8 +100,8 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             };
             _context.Surveys.Add(survey);
             
-            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com" };
-            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com" };
+            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com", FirstName = "User", LastName = "One" };
+            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com", FirstName = "User", LastName = "Two" };
             _context.Users.Add(user1);
             _context.Users.Add(user2);
             await _context.SaveChangesAsync();
@@ -127,8 +129,8 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             };
             _context.Surveys.Add(survey);
             
-            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com" };
-            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com" };
+            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com", FirstName = "User", LastName = "One" };
+            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com", FirstName = "User", LastName = "Two" };
             _context.Users.Add(user1);
             _context.Users.Add(user2);
             await _context.SaveChangesAsync();
@@ -160,7 +162,9 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
@@ -244,8 +248,8 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             };
             _context.Surveys.Add(survey);
             
-            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com" };
-            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com" };
+            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com", FirstName = "User", LastName = "One" };
+            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com", FirstName = "User", LastName = "Two" };
             var user3 = new AppUser { Id = "user3", UserName = "user3", Email = "user3@test.com" };
             _context.Users.Add(user1);
             _context.Users.Add(user2);
@@ -276,8 +280,8 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             };
             _context.Surveys.Add(survey);
             
-            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com" };
-            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com" };
+            var user1 = new AppUser { Id = "user1", UserName = "user1", Email = "user1@test.com", FirstName = "User", LastName = "One" };
+            var user2 = new AppUser { Id = "user2", UserName = "user2", Email = "user2@test.com", FirstName = "User", LastName = "Two" };
             var user3 = new AppUser { Id = "user3", UserName = "user3", Email = "user3@test.com" };
             _context.Users.Add(user1);
             _context.Users.Add(user2);

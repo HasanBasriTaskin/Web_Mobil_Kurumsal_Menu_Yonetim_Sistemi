@@ -217,7 +217,7 @@ namespace CorporateMenuManagementSystem.Tests.Controllers
                 .ReturnsAsync(response);
 
             // Act
-            var result = await _menuController.DeleteMenu(menuId) as StatusCodeResult;
+            var result = await _menuController.DeleteMenu(menuId) as ObjectResult;
 
             // Assert
             Assert.NotNull(result);
@@ -234,7 +234,7 @@ namespace CorporateMenuManagementSystem.Tests.Controllers
                 .ReturnsAsync(response);
 
             // Act
-            var result = await _menuController.DeleteMenu(menuId, true) as StatusCodeResult;
+            var result = await _menuController.DeleteMenu(menuId, true) as ObjectResult;
 
             // Assert
             Assert.NotNull(result);

@@ -55,7 +55,7 @@ namespace CorporateMenuManagementSystem.Tests.Services
                 Password = "Password123!"
             };
 
-            var existingUser = new AppUser { Email = registerDto.Email };
+            var existingUser = new AppUser { Email = registerDto.Email, FirstName = "Existing", LastName = "User" };
             _mockUserManager.Setup(m => m.FindByEmailAsync(registerDto.Email))
                 .ReturnsAsync(existingUser);
 
@@ -159,7 +159,7 @@ namespace CorporateMenuManagementSystem.Tests.Services
                 Password = "WrongPassword"
             };
 
-            var user = new AppUser { Email = loginDto.Email };
+            var user = new AppUser { Email = loginDto.Email, FirstName = "Test", LastName = "User" };
             _mockUserManager.Setup(m => m.FindByEmailAsync(loginDto.Email))
                 .ReturnsAsync(user);
             _mockSignInManager.Setup(m => m.CheckPasswordSignInAsync(user, loginDto.Password, false))
@@ -183,7 +183,7 @@ namespace CorporateMenuManagementSystem.Tests.Services
                 Password = "Password123!"
             };
 
-            var user = new AppUser { Email = loginDto.Email };
+            var user = new AppUser { Email = loginDto.Email, FirstName = "Test", LastName = "User" };
             var tokenDto = new TokenDto { AccessToken = "token123" };
 
             _mockUserManager.Setup(m => m.FindByEmailAsync(loginDto.Email))
@@ -207,7 +207,7 @@ namespace CorporateMenuManagementSystem.Tests.Services
         {
             // Arrange
             var forgotPasswordDto = new ForgotPasswordDto { Email = "test@example.com" };
-            var user = new AppUser { Email = forgotPasswordDto.Email };
+            var user = new AppUser { Email = forgotPasswordDto.Email, FirstName = "Test", LastName = "User" };
 
             _mockUserManager.Setup(m => m.FindByEmailAsync(forgotPasswordDto.Email))
                 .ReturnsAsync(user);
@@ -272,7 +272,7 @@ namespace CorporateMenuManagementSystem.Tests.Services
                 NewPassword = "NewPassword123!"
             };
 
-            var user = new AppUser { Email = resetPasswordDto.Email };
+            var user = new AppUser { Email = resetPasswordDto.Email, FirstName = "Test", LastName = "User" };
             _mockUserManager.Setup(m => m.FindByEmailAsync(resetPasswordDto.Email))
                 .ReturnsAsync(user);
             _mockUserManager.Setup(m => m.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.NewPassword))
@@ -297,7 +297,7 @@ namespace CorporateMenuManagementSystem.Tests.Services
                 NewPassword = "NewPassword123!"
             };
 
-            var user = new AppUser { Email = resetPasswordDto.Email };
+            var user = new AppUser { Email = resetPasswordDto.Email, FirstName = "Test", LastName = "User" };
             _mockUserManager.Setup(m => m.FindByEmailAsync(resetPasswordDto.Email))
                 .ReturnsAsync(user);
             _mockUserManager.Setup(m => m.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.NewPassword))

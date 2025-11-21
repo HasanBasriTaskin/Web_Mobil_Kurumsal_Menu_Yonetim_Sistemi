@@ -67,7 +67,9 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             var menu = new Menu
             {
@@ -107,7 +109,9 @@ namespace CorporateMenuManagementSystem.Tests.Repositories
             {
                 Id = "user123",
                 UserName = "testuser",
-                Email = "test@example.com"
+                Email = "test@example.com",
+                FirstName = "Test",
+                LastName = "User"
             };
             var menu = new Menu
             {
