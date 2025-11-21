@@ -138,6 +138,34 @@ export default function OylamaYonetimiPage() {
     }
   };
 
+  const handleDeleteSurvey = async () => {
+    if (!activeSurvey) return;
+
+    if (!confirm('Bu anketi silmek üzeresiniz. Devam etmek istiyor musunuz?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await surveyAPI.deleteSurvey(activeSurvey.id);
+
+      if (response.isSuccessful || response.success) {
+        toast.success('Anket başarıyla silindi');
+        setActiveSurvey(null);
+        setSurveyResults(null);
+        setShowCreateForm(true);
+      } else {
+        toast.error(response.message || 'Anket silinemedi');
+      }
+    } catch (error) {
+      console.error('Anket silme hatası:', error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.Message || 'Anket silinirken bir hata oluştu';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Belirsiz';
     return new Date(dateString).toLocaleDateString('tr-TR', {
@@ -286,17 +314,26 @@ export default function OylamaYonetimiPage() {
                   </div>
                 )}
               </div>
-              <button
-                onClick={handleToggleStatus}
-                disabled={loading}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
-                  activeSurvey.isActive
-                    ? 'bg-red-600 text-white hover:bg-red-700'
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-              >
-                {activeSurvey.isActive ? 'Durdur' : 'Yeniden Başlat'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleToggleStatus}
+                  disabled={loading}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                    activeSurvey.isActive
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                >
+                  {activeSurvey.isActive ? 'Durdur' : 'Yeniden Başlat'}
+                </button>
+                <button
+                  onClick={handleDeleteSurvey}
+                  disabled={loading}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-900 hover:bg-gray-300 disabled:opacity-50"
+                >
+                  Sil
+                </button>
+              </div>
             </div>
           </div>
 

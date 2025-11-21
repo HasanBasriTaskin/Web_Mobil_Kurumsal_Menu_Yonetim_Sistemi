@@ -350,6 +350,12 @@ export const surveyAPI = {
     return response.data;
   },
 
+  // Admin - Anket sil
+  deleteSurvey: async (surveyId) => {
+    const response = await apiClient.delete(`/admin/survey/${surveyId}`);
+    return response.data;
+  },
+
   // Admin - Anket sonuçlarını getir
   getResults: async (surveyId) => {
     const response = await apiClient.get(`/admin/survey/${surveyId}/results`);
