@@ -1,6 +1,5 @@
-using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using System.Threading.Tasks;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Survey;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {

@@ -1,11 +1,8 @@
-using Bogus;
 using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.DataSeeder.Fakers;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.DataSeeder
 {
@@ -47,7 +44,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.
 
             var users = await userManager.Users.Where(u => u.UserName != "admin").ToListAsync();
             var menus = await context.Menus.ToListAsync();
-            
+
             if (!users.Any() || !menus.Any()) return;
 
             // 3. Rezervasyonları Üret
@@ -55,7 +52,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.
             {
                 var reservationFaker = new ReservationFaker(users, menus);
                 var fakeReservations = reservationFaker.Generate(users.Count * menuDays / 2); // Ortalama sayıda rezervasyon
-                
+
                 // Yinelenen kayıtları engelle
                 var distinctReservations = fakeReservations
                     .GroupBy(r => new { r.AppUserId, r.MenuId })
@@ -64,12 +61,12 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.
                 await context.Reservations.AddRangeAsync(distinctReservations);
                 await context.SaveChangesAsync();
             }
-            
+
             // 4. Geri Bildirimleri Üret
             if (!await context.Feedbacks.AnyAsync())
             {
                 var pastMenus = menus.Where(m => m.MenuDate.Date < System.DateTime.Now.Date).ToList();
-                if(pastMenus.Any())
+                if (pastMenus.Any())
                 {
                     var feedbackFaker = new FeedbackFaker(users, pastMenus);
                     var fakeFeedbacks = feedbackFaker.Generate(users.Count * pastMenus.Count / 4); // Daha az sayıda feedback
@@ -77,7 +74,7 @@ namespace CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.
                     var distinctFeedbacks = fakeFeedbacks
                         .GroupBy(f => new { f.AppUserId, f.MenuId })
                         .Select(g => g.First());
-                    
+
                     await context.Feedbacks.AddRangeAsync(distinctFeedbacks);
                     await context.SaveChangesAsync();
                 }

@@ -1,8 +1,5 @@
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Reservation;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.BusinessLayer.Abstract
 {

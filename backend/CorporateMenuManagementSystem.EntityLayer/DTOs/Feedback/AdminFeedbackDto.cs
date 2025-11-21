@@ -1,6 +1,5 @@
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Auth;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Menu;
-using System;
 
 namespace CorporateMenuManagementSystem.EntityLayer.DTOs.Feedback
 {

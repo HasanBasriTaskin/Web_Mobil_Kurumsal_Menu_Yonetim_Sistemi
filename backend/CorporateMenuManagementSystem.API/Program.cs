@@ -1,17 +1,17 @@
+using CorporateMenuManagementSystem.API.Mappings;
 using CorporateMenuManagementSystem.BusinessLayer.Abstract;
 using CorporateMenuManagementSystem.BusinessLayer.Concrete;
 using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
-using CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories;
 using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder;
+using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.DataSeeder;
+using CorporateMenuManagementSystem.DataAccessLayer.Concrete.Repositories;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using CorporateMenuManagementSystem.API.Mappings;
-using CorporateMenuManagementSystem.DataAccessLayer.Concrete.DatabaseFolder.DataSeeder;
 using Microsoft.OpenApi.Models;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,9 +77,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy.WithOrigins(
-            "http://localhost:3000",                                
-            "https://corporatemenusystem.taskinnovation.net",       
-            "https://www.corporatemenusystem.taskinnovation.net"    
+            "http://localhost:3000",
+            "https://corporatemenusystem.taskinnovation.net",
+            "https://www.corporatemenusystem.taskinnovation.net"
         )
               .AllowAnyHeader()
               .AllowAnyMethod()
@@ -139,7 +139,7 @@ using (var scope = app.Services.CreateScope())
 
     await context.Database.MigrateAsync();
     await SeedData.Initialize(services, userManager, roleManager, configuration);
-    
+
     await DataGenerator.SeedAsync(context, userManager, configuration);
 
 }

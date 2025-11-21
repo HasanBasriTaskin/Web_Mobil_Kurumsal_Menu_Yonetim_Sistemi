@@ -13,7 +13,7 @@ namespace CorporateMenuManagementSystem.EntityLayer.Entitites
         public string Title { get; set; }
 
         public bool IsActive { get; set; } = true;
-        
+
         public DateTime? EndDate { get; set; }
 
         // Navigation Properties
