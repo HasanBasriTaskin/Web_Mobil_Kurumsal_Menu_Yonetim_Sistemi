@@ -198,6 +198,12 @@ export const menuAPI = {
     return response.data;
   },
 
+  // GET /api/admin/menu - Tüm menüleri getir (Admin)
+  getAll: async () => {
+    const response = await apiClient.get('/admin/menu');
+    return response.data;
+  },
+
   // GET /api/admin/menu/{id} - Belirli bir menüyü getir (Admin)
   getById: async (id) => {
     const response = await apiClient.get(`/admin/menu/${id}`);

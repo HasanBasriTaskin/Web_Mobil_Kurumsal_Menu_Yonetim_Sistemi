@@ -83,6 +83,21 @@ namespace CorporateMenuManagementSystem.BusinessLayer.Concrete
             return Response<MenuDto>.Success(menuDto, 200);
         }
 
+        public async Task<Response<List<MenuDto>>> GetAllMenusAsync()
+        {
+            var menus = await _menuRepository.GetAllAsync();
+            
+            if (menus == null || !menus.Any())
+            {
+                return Response<List<MenuDto>>.Success(new List<MenuDto>(), 200);
+            }
+
+            // Tarihe göre sırala (en yeni en üstte)
+            var sortedMenus = menus.OrderByDescending(m => m.MenuDate).ToList();
+            var menuDtos = _mapper.Map<List<MenuDto>>(sortedMenus);
+            return Response<List<MenuDto>>.Success(menuDtos, 200);
+        }
+
         public async Task<Response<List<MenuDto>>> GetTopRatedMenusAsync(int count)
         {
             var menus = await _menuRepository.GetTopRatedMenusAsync(count);

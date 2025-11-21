@@ -39,7 +39,16 @@ namespace CorporateMenuManagementSystem.API.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
-        // GET: api/menu/{id}
+        // GET: api/admin/menu - Tüm menüleri listele
+        [HttpGet("admin/menu")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllMenus()
+        {
+            var result = await _menuService.GetAllMenusAsync();
+            return StatusCode(result.StatusCode, result);
+        }
+
+        // GET: api/admin/menu/{id}
         [HttpGet("admin/menu/{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetMenuById(int id)
