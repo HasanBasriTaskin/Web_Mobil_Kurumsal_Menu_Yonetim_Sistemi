@@ -236,22 +236,6 @@ export default function AdminPage() {
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Hızlı İşlemler</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Yeni Yemek Ekle */}
-            <Link
-              href="/admin/yemek-yonetimi"
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-1">Yeni Yemek Ekle</h3>
-                <p className="text-xs text-gray-500">Yemek kaydı oluştur</p>
-              </div>
-            </Link>
-
             {/* Menü Oluştur */}
             <Link
               href="/admin/menu-yonetimi"

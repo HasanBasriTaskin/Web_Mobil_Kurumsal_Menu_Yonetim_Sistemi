@@ -438,7 +438,7 @@ export default function LoginPage() {
           <div className="mt-6 p-4 bg-gray-100 rounded-lg text-xs text-gray-600">
             <p className="font-semibold mb-2">Test Kullanıcıları:</p>
             <p>Admin: admin@taskinnovation.com / Taskinnovation1234!</p>
-            <p>User: user@company.com / user123</p>
+            <p>User: Jairo13@hotmail.com / Password123!</p>
           </div>
         </div>
       </div>
