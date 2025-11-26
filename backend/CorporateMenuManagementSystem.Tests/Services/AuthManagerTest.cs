@@ -10,6 +10,7 @@ using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Microsoft.AspNetCore.Identity;
 using Moq;
+using MockQueryable.Moq;
 using Xunit;
 
 namespace CorporateMenuManagementSystem.Tests.Services
@@ -80,11 +81,13 @@ namespace CorporateMenuManagementSystem.Tests.Services
             };
 
             var tokenDto = new TokenDto { AccessToken = "token123" };
+            var usersList = new List<AppUser>();
+            var mockUsers = usersList.AsQueryable().BuildMock();
             
             _mockUserManager.Setup(m => m.FindByEmailAsync(registerDto.Email))
                 .ReturnsAsync((AppUser?)null);
             _mockUserManager.Setup(m => m.Users)
-                .Returns(new List<AppUser>().AsQueryable());
+                .Returns(mockUsers);
             _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<AppUser>(), registerDto.Password))
                 .ReturnsAsync(IdentityResult.Success);
             _mockUserManager.Setup(m => m.AddToRoleAsync(It.IsAny<AppUser>(), "User"))
@@ -113,10 +116,13 @@ namespace CorporateMenuManagementSystem.Tests.Services
                 Password = "weak"
             };
 
+            var usersList = new List<AppUser>();
+            var mockUsers = usersList.AsQueryable().BuildMock();
+
             _mockUserManager.Setup(m => m.FindByEmailAsync(registerDto.Email))
                 .ReturnsAsync((AppUser?)null);
             _mockUserManager.Setup(m => m.Users)
-                .Returns(new List<AppUser>().AsQueryable());
+                .Returns(mockUsers);
             _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<AppUser>(), registerDto.Password))
                 .ReturnsAsync(IdentityResult.Failed(new IdentityError { Code = "PasswordTooShort", Description = "Password is too short" }));
 
@@ -126,6 +132,47 @@ namespace CorporateMenuManagementSystem.Tests.Services
             // Assert
             Assert.Equal(400, result.StatusCode);
             Assert.False(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task RegisterAsync_WhenUsernameExists_ShouldAppendNumber()
+        {
+            // Arrange
+            var registerDto = new RegisterDto
+            {
+                FirstName = "Test",
+                LastName = "User",
+                Email = "test@example.com",
+                Password = "Password123!"
+            };
+
+            var tokenDto = new TokenDto { AccessToken = "token123" };
+            var existingUsers = new List<AppUser>
+            {
+                new AppUser { UserName = "test" },
+                new AppUser { UserName = "test1" },
+                new AppUser { UserName = "test2" }
+            };
+            var mockUsers = existingUsers.AsQueryable().BuildMock();
+            
+            _mockUserManager.Setup(m => m.FindByEmailAsync(registerDto.Email))
+                .ReturnsAsync((AppUser?)null);
+            _mockUserManager.Setup(m => m.Users)
+                .Returns(mockUsers);
+            _mockUserManager.Setup(m => m.CreateAsync(It.IsAny<AppUser>(), registerDto.Password))
+                .ReturnsAsync(IdentityResult.Success);
+            _mockUserManager.Setup(m => m.AddToRoleAsync(It.IsAny<AppUser>(), "User"))
+                .ReturnsAsync(IdentityResult.Success);
+            _mockTokenService.Setup(m => m.CreateTokenAsync(It.IsAny<AppUser>()))
+                .ReturnsAsync(tokenDto);
+
+            // Act
+            var result = await _authManager.RegisterAsync(registerDto);
+
+            // Assert
+            Assert.Equal(201, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            _mockUserManager.Verify(m => m.CreateAsync(It.Is<AppUser>(u => u.UserName.StartsWith("test") && u.UserName.Length > 4), registerDto.Password), Times.Once);
         }
 
         [Fact]

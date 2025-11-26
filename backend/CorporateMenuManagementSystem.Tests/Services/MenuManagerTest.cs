@@ -2,9 +2,14 @@
 using CorporateMenuManagementSystem.BusinessLayer.Concrete;
 using CorporateMenuManagementSystem.DataAccessLayer.Abstract;
 using CorporateMenuManagementSystem.EntityLayer.DTOs.Menu;
+using CorporateMenuManagementSystem.EntityLayer.DTOs.Responses;
 using CorporateMenuManagementSystem.EntityLayer.Entitites;
 using Moq;
 using System.Linq.Expressions;
+using Xunit;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace CorporateMenuManagementSystem.Tests.Services
 {
@@ -92,6 +97,434 @@ namespace CorporateMenuManagementSystem.Tests.Services
             // Assert (Doğrulama)
             Assert.Equal(201, result.StatusCode);
             _mockMenuRepo.Verify(repo => repo.AddAsync(It.IsAny<Menu>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetMenuByIdAsync_WhenMenuNotFound_ShouldReturn404()
+        {
+            // Arrange
+            var menuId = 1;
+
+            _mockMenuRepo.Setup(r => r.GetByIdAsync(menuId))
+                .ReturnsAsync((Menu?)null);
+
+            // Act
+            var result = await _menuManager.GetMenuByIdAsync(menuId);
+
+            // Assert
+            Assert.Equal(404, result.StatusCode);
+            Assert.False(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task GetMenuByIdAsync_WhenValid_ShouldReturn200()
+        {
+            // Arrange
+            var menuId = 1;
+            var menu = new Menu { Id = menuId, MenuDate = DateTime.Now.AddDays(1) };
+            var menuDto = new MenuDto { Id = menuId };
+
+            _mockMenuRepo.Setup(r => r.GetByIdAsync(menuId))
+                .ReturnsAsync(menu);
+            _mockMapper.Setup(m => m.Map<MenuDto>(menu))
+                .Returns(menuDto);
+
+            // Act
+            var result = await _menuManager.GetMenuByIdAsync(menuId);
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            Assert.NotNull(result.Data);
+        }
+
+        [Fact]
+        public async Task GetMenuByDateWithRelationsAsync_WhenMenuNotFound_ShouldReturn404()
+        {
+            // Arrange
+            var date = DateTime.Now.AddDays(1);
+
+            _mockMenuRepo.Setup(r => r.GetMenuByDateWithRelationsAsync(date))
+                .ReturnsAsync((Menu?)null);
+
+            // Act
+            var result = await _menuManager.GetMenuByDateWithRelationsAsync(date);
+
+            // Assert
+            Assert.Equal(404, result.StatusCode);
+            Assert.False(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task GetMenuByDateWithRelationsAsync_WhenValid_ShouldReturn200()
+        {
+            // Arrange
+            var date = DateTime.Now.AddDays(1);
+            var menu = new Menu { Id = 1, MenuDate = date };
+            var menuDto = new MenuDto { Id = 1 };
+
+            _mockMenuRepo.Setup(r => r.GetMenuByDateWithRelationsAsync(date))
+                .ReturnsAsync(menu);
+            _mockMapper.Setup(m => m.Map<MenuDto>(menu))
+                .Returns(menuDto);
+
+            // Act
+            var result = await _menuManager.GetMenuByDateWithRelationsAsync(date);
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            Assert.NotNull(result.Data);
+        }
+
+        [Fact]
+        public async Task GetAllMenusAsync_WhenNoMenus_ShouldReturn200WithEmptyList()
+        {
+            // Arrange
+            _mockMenuRepo.Setup(r => r.GetAllAsync())
+                .ReturnsAsync(new List<Menu>());
+
+            // Act
+            var result = await _menuManager.GetAllMenusAsync();
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            Assert.NotNull(result.Data);
+            Assert.Empty(result.Data!);
+        }
+
+        [Fact]
+        public async Task GetAllMenusAsync_WhenValid_ShouldReturn200SortedByDate()
+        {
+            // Arrange
+            var menus = new List<Menu>
+            {
+                new Menu { Id = 1, MenuDate = DateTime.Now.AddDays(3) },
+                new Menu { Id = 2, MenuDate = DateTime.Now.AddDays(1) },
+                new Menu { Id = 3, MenuDate = DateTime.Now.AddDays(5) }
+            };
+            var menuDtos = new List<MenuDto>
+            {
+                new MenuDto { Id = 3, MenuDate = DateTime.Now.AddDays(5) },
+                new MenuDto { Id = 1, MenuDate = DateTime.Now.AddDays(3) },
+                new MenuDto { Id = 2, MenuDate = DateTime.Now.AddDays(1) }
+            };
+
+            _mockMenuRepo.Setup(r => r.GetAllAsync())
+                .ReturnsAsync(menus);
+            _mockMapper.Setup(m => m.Map<List<MenuDto>>(It.IsAny<List<Menu>>()))
+                .Returns(menuDtos);
+
+            // Act
+            var result = await _menuManager.GetAllMenusAsync();
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            Assert.NotNull(result.Data);
+            Assert.Equal(3, result.Data!.Count);
+        }
+
+        [Fact]
+        public async Task GetTopRatedMenusAsync_WhenValid_ShouldReturn200()
+        {
+            // Arrange
+            var count = 5;
+            var menus = new List<Menu>
+            {
+                new Menu { Id = 1 },
+                new Menu { Id = 2 }
+            };
+            var menuDtos = new List<MenuDto>
+            {
+                new MenuDto { Id = 1 },
+                new MenuDto { Id = 2 }
+            };
+
+            _mockMenuRepo.Setup(r => r.GetTopRatedMenusAsync(count))
+                .ReturnsAsync(menus);
+            _mockMapper.Setup(m => m.Map<List<MenuDto>>(menus))
+                .Returns(menuDtos);
+
+            // Act
+            var result = await _menuManager.GetTopRatedMenusAsync(count);
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            Assert.NotNull(result.Data);
+            Assert.Equal(2, result.Data!.Count);
+        }
+
+        [Fact]
+        public async Task UpdateMenuAsync_WhenMenuNotFound_ShouldReturn404()
+        {
+            // Arrange
+            var menuId = 1;
+            var updateMenuDto = new UpdateMenuDto { Soup = "New Soup" };
+
+            _mockMenuRepo.Setup(r => r.GetByIdAsync(menuId))
+                .ReturnsAsync((Menu?)null);
+
+            // Act
+            var result = await _menuManager.UpdateMenuAsync(menuId, updateMenuDto);
+
+            // Assert
+            Assert.Equal(404, result.StatusCode);
+            Assert.False(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task UpdateMenuAsync_WhenValid_ShouldReturn200()
+        {
+            // Arrange
+            var menuId = 1;
+            var updateMenuDto = new UpdateMenuDto { Soup = "New Soup" };
+            var existingMenu = new Menu { Id = menuId, Soup = "Old Soup" };
+            var menuDto = new MenuDto { Id = menuId, Soup = "New Soup" };
+
+            _mockMenuRepo.Setup(r => r.GetByIdAsync(menuId))
+                .ReturnsAsync(existingMenu);
+            _mockMapper.Setup(m => m.Map<MenuDto>(It.IsAny<Menu>()))
+                .Returns(menuDto);
+
+            // Act
+            var result = await _menuManager.UpdateMenuAsync(menuId, updateMenuDto);
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            _mockMenuRepo.Verify(r => r.UpdateAsync(It.IsAny<Menu>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteMenuAsync_WhenMenuNotFound_ShouldReturn404()
+        {
+            // Arrange
+            var menuId = 1;
+
+            _mockMenuRepo.Setup(r => r.GetByIdAsync(menuId))
+                .ReturnsAsync((Menu?)null);
+
+            // Act
+            var result = await _menuManager.DeleteMenuAsync(menuId);
+
+            // Assert
+            Assert.Equal(404, result.StatusCode);
+            Assert.False(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task DeleteMenuAsync_WhenHasReservations_ShouldReturn400()
+        {
+            // Arrange
+            var menuId = 1;
+            var menu = new Menu { Id = menuId };
+
+            _mockMenuRepo.Setup(r => r.GetByIdAsync(menuId))
+                .ReturnsAsync(menu);
+            _mockReservationRepo.Setup(r => r.GetListByFilterAsync(It.IsAny<Expression<Func<Reservation, bool>>>()))
+                .ReturnsAsync(new List<Reservation> { new Reservation { Id = 1, MenuId = menuId } });
+
+            // Act
+            var result = await _menuManager.DeleteMenuAsync(menuId);
+
+            // Assert
+            Assert.Equal(400, result.StatusCode);
+            Assert.False(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task DeleteMenuAsync_WhenForceIsTrue_ShouldReturn204()
+        {
+            // Arrange
+            var menuId = 1;
+            var menu = new Menu { Id = menuId };
+
+            _mockMenuRepo.Setup(r => r.GetByIdAsync(menuId))
+                .ReturnsAsync(menu);
+
+            // Act
+            var result = await _menuManager.DeleteMenuAsync(menuId, force: true);
+
+            // Assert
+            Assert.Equal(204, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            _mockMenuRepo.Verify(r => r.DeleteAsync(menu), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteMenuAsync_WhenNoReservations_ShouldReturn204()
+        {
+            // Arrange
+            var menuId = 1;
+            var menu = new Menu { Id = menuId };
+
+            _mockMenuRepo.Setup(r => r.GetByIdAsync(menuId))
+                .ReturnsAsync(menu);
+            _mockReservationRepo.Setup(r => r.GetListByFilterAsync(It.IsAny<Expression<Func<Reservation, bool>>>()))
+                .ReturnsAsync(new List<Reservation>());
+
+            // Act
+            var result = await _menuManager.DeleteMenuAsync(menuId);
+
+            // Assert
+            Assert.Equal(204, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            _mockMenuRepo.Verify(r => r.DeleteAsync(menu), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetWeeklyMenusAsync_WhenWeekIsCurrent_ShouldReturn200()
+        {
+            // Arrange
+            var week = "current";
+            var today = DateTime.Today;
+            var monday = today.AddDays(-((int)today.DayOfWeek - 1) + (today.DayOfWeek == DayOfWeek.Sunday ? -6 : 0));
+            var sunday = monday.AddDays(6);
+            var menus = new List<Menu>
+            {
+                new Menu { Id = 1, MenuDate = monday.AddDays(1) }
+            };
+            var menuDtos = new List<MenuDto>
+            {
+                new MenuDto { Id = 1 }
+            };
+
+            _mockMenuRepo.Setup(r => r.GetMenusByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(menus);
+            _mockMapper.Setup(m => m.Map<List<MenuDto>>(menus))
+                .Returns(menuDtos);
+
+            // Act
+            var result = await _menuManager.GetWeeklyMenusAsync(week);
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task GetWeeklyMenusAsync_WhenWeekIsNext_ShouldReturn200()
+        {
+            // Arrange
+            var week = "next";
+            var menus = new List<Menu>
+            {
+                new Menu { Id = 1 }
+            };
+            var menuDtos = new List<MenuDto>
+            {
+                new MenuDto { Id = 1 }
+            };
+
+            _mockMenuRepo.Setup(r => r.GetMenusByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(menus);
+            _mockMapper.Setup(m => m.Map<List<MenuDto>>(menus))
+                .Returns(menuDtos);
+
+            // Act
+            var result = await _menuManager.GetWeeklyMenusAsync(week);
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task GetWeeklyMenusAsync_WhenNoMenus_ShouldReturn404()
+        {
+            // Arrange
+            var week = "current";
+
+            _mockMenuRepo.Setup(r => r.GetMenusByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new List<Menu>());
+
+            // Act
+            var result = await _menuManager.GetWeeklyMenusAsync(week);
+
+            // Assert
+            Assert.Equal(404, result.StatusCode);
+            Assert.False(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task GetPastMenusAsync_WhenNoMenus_ShouldReturn404()
+        {
+            // Arrange
+            var weeksBack = 4;
+
+            _mockMenuRepo.Setup(r => r.GetPastMenusWithFeedbackAsync(weeksBack))
+                .ReturnsAsync(new List<Menu>());
+
+            // Act
+            var result = await _menuManager.GetPastMenusAsync(weeksBack);
+
+            // Assert
+            Assert.Equal(404, result.StatusCode);
+            Assert.False(result.IsSuccessful);
+        }
+
+        [Fact]
+        public async Task GetPastMenusAsync_WhenValid_ShouldReturn200()
+        {
+            // Arrange
+            var weeksBack = 4;
+            var menus = new List<Menu>
+            {
+                new Menu 
+                { 
+                    Id = 1, 
+                    MenuDate = DateTime.Now.AddDays(-7),
+                    Feedbacks = new List<Feedback>
+                    {
+                        new Feedback { Star = 5 },
+                        new Feedback { Star = 4 }
+                    }
+                }
+            };
+
+            _mockMenuRepo.Setup(r => r.GetPastMenusWithFeedbackAsync(weeksBack))
+                .ReturnsAsync(menus);
+
+            // Act
+            var result = await _menuManager.GetPastMenusAsync(weeksBack);
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            Assert.NotNull(result.Data);
+            Assert.Single(result.Data!);
+            Assert.Equal(4.5, result.Data![0].AverageRating);
+        }
+
+        [Fact]
+        public async Task GetPastMenusAsync_WhenNoFeedbacks_ShouldReturnZeroRating()
+        {
+            // Arrange
+            var weeksBack = 4;
+            var menus = new List<Menu>
+            {
+                new Menu 
+                { 
+                    Id = 1, 
+                    MenuDate = DateTime.Now.AddDays(-7),
+                    Feedbacks = null
+                }
+            };
+
+            _mockMenuRepo.Setup(r => r.GetPastMenusWithFeedbackAsync(weeksBack))
+                .ReturnsAsync(menus);
+
+            // Act
+            var result = await _menuManager.GetPastMenusAsync(weeksBack);
+
+            // Assert
+            Assert.Equal(200, result.StatusCode);
+            Assert.True(result.IsSuccessful);
+            Assert.NotNull(result.Data);
+            Assert.Equal(0, result.Data![0].AverageRating);
         }
     } // Class burada bitiyor
 } // Namespace burada bitiyor (Eğer bu parantez eksikse } expected hatası alırsın)
