@@ -29,6 +29,7 @@ builder.Services.AddIdentity<AppUser, AppRole>()
     .AddEntityFrameworkStores<MenuContext>()
     .AddDefaultTokenProviders();
 
+
 // Dependency Injection Yapılandırması
 builder.Services.AddScoped<IAuthService, AuthManager>();
 builder.Services.AddScoped<ITokenService, TokenManager>();
