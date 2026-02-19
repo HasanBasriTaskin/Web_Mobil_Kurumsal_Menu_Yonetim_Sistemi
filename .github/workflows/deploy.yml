@@ -28,4 +28,4 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./release_folder/
-        server-dir: /httpdocs/ # Plesk genelde web kök dizini olarak httpdocs kullanır.
+        server-dir: / # Plesk genelde web kök dizini olarak httpdocs kullanır.
