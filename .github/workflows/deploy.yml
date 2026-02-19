@@ -1,45 +1,31 @@
-name: Backend Deploy
+name: Backend Deploy via FTP
 
 on:
   push:
-    branches: [ "main" ]      # Ana dalının adı 'master' ise burayı 'master' yap
+    branches: [ "main" ]      
     paths:
-      - 'backend/**'          # Sadece backend klasörü değişince çalışır
+      - 'backend/**'          
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Kodları GitHub'dan Çek
     - uses: actions/checkout@v4
 
-    # 2. .NET 8 Kurulumu Yap
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
-    # 3. Projeyi Derle (Publish)
     - name: Publish Backend
       run: dotnet publish backend/CorporateMenuManagementSystem.API/CorporateMenuManagementSystem.API.csproj -c Release -o release_folder
 
-    # 4. Dosyaları Sunucuya Kopyala
-    - name: Copy files via SSH
-      uses: appleboy/scp-action@master
+    - name: FTP Deploy
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
       with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_KEY }}
-        source: "release_folder/*"
-        target: "/var/www/projem"
-        strip_components: 1
-
-    # 5. Servisi Yeniden Başlat
-    - name: Restart Service
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_KEY }}
-        script: sudo systemctl restart kestrel-projem.service
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./release_folder/
+        server-dir: /httpdocs/ # Plesk genelde web kök dizini olarak httpdocs kullanır.
