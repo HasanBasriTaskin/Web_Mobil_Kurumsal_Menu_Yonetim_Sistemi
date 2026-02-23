@@ -129,20 +129,27 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Veritabanı Hazırlama ve Veri Tohumlama
-using (var scope = app.Services.CreateScope())
+try
 {
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<MenuContext>();
-    var userManager = services.GetRequiredService<UserManager<AppUser>>();
-    var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
-    var configuration = services.GetRequiredService<IConfiguration>();
+    // Veritabanı Hazırlama ve Veri Tohumlama
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        var context = services.GetRequiredService<MenuContext>();
+        var userManager = services.GetRequiredService<UserManager<AppUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
+        var configuration = services.GetRequiredService<IConfiguration>();
 
-    await context.Database.MigrateAsync();
-    await SeedData.Initialize(services, userManager, roleManager, configuration);
+        await context.Database.MigrateAsync();
+        await SeedData.Initialize(services, userManager, roleManager, configuration);
 
-    await DataGenerator.SeedAsync(context, userManager, configuration);
-
+        await DataGenerator.SeedAsync(context, userManager, configuration);
+    }
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occurred during database migration or data seeding.");
 }
 
 
