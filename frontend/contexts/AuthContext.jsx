@@ -98,6 +98,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('❌ Login error:', error);
       const errorMessage =
+        error.response?.data?.errors?.[0]?.message ||
         error.response?.data?.message ||
         'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.';
       toast.error(errorMessage);
@@ -158,6 +159,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('❌ Register error:', error);
       const errorMessage =
+        error.response?.data?.errors?.[0]?.message ||
         error.response?.data?.message ||
         'Kayıt olunurken bir hata oluştu. Lütfen tekrar deneyin.';
       toast.error(errorMessage);
@@ -214,6 +216,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('Forgot password error:', error);
       const errorMessage =
+        error.response?.data?.errors?.[0]?.message ||
         error.response?.data?.message ||
         'Bir hata oluştu. Lütfen tekrar deneyin.';
       toast.error(errorMessage);
@@ -242,6 +245,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       console.error('Reset password error:', error);
       const errorMessage =
+        error.response?.data?.errors?.[0]?.message ||
         error.response?.data?.message ||
         'Bir hata oluştu. Lütfen tekrar deneyin.';
       toast.error(errorMessage);
