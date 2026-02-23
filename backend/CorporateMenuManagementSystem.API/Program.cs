@@ -150,6 +150,18 @@ catch (Exception ex)
 {
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
     logger.LogError(ex, "An error occurred during database migration or data seeding.");
+    
+    try
+    {
+        var logDir = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "logs");
+        if (!System.IO.Directory.Exists(logDir))
+        {
+            System.IO.Directory.CreateDirectory(logDir);
+        }
+        var logFile = System.IO.Path.Combine(logDir, "startup_error.txt");
+        System.IO.File.AppendAllText(logFile, $"{DateTime.Now}: An error occurred during database migration or data seeding.\n{ex.ToString()}\n\n");
+    }
+    catch { }
 }
 
 
