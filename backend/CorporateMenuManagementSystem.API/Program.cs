@@ -127,59 +127,78 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
-var app = builder.Build();
-
 try
 {
-    // Veritabanı Hazırlama ve Veri Tohumlama
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-        var context = services.GetRequiredService<MenuContext>();
-        var userManager = services.GetRequiredService<UserManager<AppUser>>();
-        var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
-        var configuration = services.GetRequiredService<IConfiguration>();
+    var app = builder.Build();
 
-        await context.Database.MigrateAsync();
-        await SeedData.Initialize(services, userManager, roleManager, configuration);
-
-        await DataGenerator.SeedAsync(context, userManager, configuration);
-    }
-}
-catch (Exception ex)
-{
-    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogError(ex, "An error occurred during database migration or data seeding.");
-    
     try
     {
-        var logDir = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "logs");
-        if (!System.IO.Directory.Exists(logDir))
+        // Veritabanı Hazırlama ve Veri Tohumlama
+        using (var scope = app.Services.CreateScope())
         {
-            System.IO.Directory.CreateDirectory(logDir);
+            var services = scope.ServiceProvider;
+            var context = services.GetRequiredService<MenuContext>();
+            var userManager = services.GetRequiredService<UserManager<AppUser>>();
+            var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
+            var configuration = services.GetRequiredService<IConfiguration>();
+
+            await context.Database.MigrateAsync();
+            await SeedData.Initialize(services, userManager, roleManager, configuration);
+
+            await DataGenerator.SeedAsync(context, userManager, configuration);
         }
-        var logFile = System.IO.Path.Combine(logDir, "startup_error.txt");
-        System.IO.File.AppendAllText(logFile, $"{DateTime.Now}: An error occurred during database migration or data seeding.\n{ex.ToString()}\n\n");
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred during database migration or data seeding.");
+        
+        try
+        {
+            var logDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            if (!System.IO.Directory.Exists(logDir))
+            {
+                System.IO.Directory.CreateDirectory(logDir);
+            }
+            var logFile = System.IO.Path.Combine(logDir, "startup_error.txt");
+            System.IO.File.AppendAllText(logFile, $"{DateTime.Now}: An error occurred during database migration or data seeding.\n{ex.ToString()}\n\n");
+        }
+        catch { }
+    }
+
+
+    // Configure the HTTP request pipeline.
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseHttpsRedirection();
+
+    // CORS middleware'i Authentication'dan ÖNCE olmalı
+    app.UseCors("AllowFrontend");
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapControllers();
+
+    app.Run();
+}
+catch(Exception hostEx)
+{
+    try
+    {
+        var globalLogDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+        if (!System.IO.Directory.Exists(globalLogDir))
+        {
+            System.IO.Directory.CreateDirectory(globalLogDir);
+        }
+        var globalLogFile = System.IO.Path.Combine(globalLogDir, "host_startup_error.txt");
+        System.IO.File.AppendAllText(globalLogFile, $"{DateTime.Now}: CRITICAL HOST EXCEPTION.\n{hostEx.ToString()}\n\n");
     }
     catch { }
+
+    throw; 
 }
-
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-
-// CORS middleware'i Authentication'dan ÖNCE olmalı
-app.UseCors("AllowFrontend");
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
