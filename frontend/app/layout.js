@@ -3,8 +3,9 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "sonner";
 
 export const metadata = {
-  title: "Kurumsal Menu Yönetim Sistemi",
-  description: "Web ve Mobil Kurumsal Menu Yönetim Sistemi",
+  metadataBase: new URL("https://corporatemenusystem.taskinnovation.net"),
+  title: "MENUO | Kurumsal Menü Yönetim Sistemi",
+  description: "Web ve Mobil Kurumsal Menü Yönetim Sistemi",
 };
 
 export default function RootLayout({ children }) {
