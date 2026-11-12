@@ -4,7 +4,8 @@ Modern ve kullanıcı dostu kurumsal menü yönetim sistemi. Çalışanların g�
 
 ## Canlı Demo
 
-**Frontend:** https://corporatemenusystem.taskinnovation.net
+- **Frontend:** https://corporatemenusystem.taskinnovation.net
+- **Proje yazısı:** https://taskinnovation.net/blog/corporate-menu-system
 
 ## Proje Yapısı
 
